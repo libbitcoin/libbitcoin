@@ -18,16 +18,11 @@
  */
 #include <bitcoin/system/message/merkle_block.hpp>
 
-#include <bitcoin/system/chain/block.hpp>
-#include <bitcoin/system/chain/header.hpp>
-#include <bitcoin/system/math/limits.hpp>
-#include <bitcoin/system/message/messages.hpp>
+#include <bitcoin/system/assert.hpp>
+#include <bitcoin/system/math/safe.hpp>
+#include <bitcoin/system/message/message.hpp>
 #include <bitcoin/system/message/version.hpp>
-#include <bitcoin/system/utility/assert.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -82,7 +77,7 @@ merkle_block::merkle_block(chain::header&& header, size_t total_transactions,
 // for the transaction count and invalidating on deserialization and construct.
 merkle_block::merkle_block(const chain::block& block)
   : merkle_block(block.header(),
-        safe_unsigned<uint32_t>(block.transactions().size()),
+        safe_cast<uint32_t>(block.transactions().size()),
         block.to_hashes(), {})
 {
 }
@@ -116,13 +111,13 @@ void merkle_block::reset()
 
 bool merkle_block::from_data(uint32_t version, const data_chunk& data)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(version, istream);
 }
 
 bool merkle_block::from_data(uint32_t version, std::istream& stream)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(version, source);
 }
 
@@ -134,10 +129,10 @@ bool merkle_block::from_data(uint32_t version, reader& source)
         return false;
 
     total_transactions_ = source.read_4_bytes_little_endian();
-    const auto count = source.read_size_little_endian();
+    const auto count = source.read_size();
 
     // Guard against potential for arbitrary memory allocation.
-    if (count > max_block_size)
+    if (count > chain::max_block_size)
         source.invalidate();
     else
         hashes_.reserve(count);
@@ -145,7 +140,7 @@ bool merkle_block::from_data(uint32_t version, reader& source)
     for (size_t hash = 0; hash < hashes_.capacity() && source; ++hash)
         hashes_.push_back(source.read_hash());
 
-    flags_ = source.read_bytes(source.read_size_little_endian());
+    flags_ = source.read_bytes(source.read_size());
 
     if (version < merkle_block::version_minimum)
         source.invalidate();
@@ -161,7 +156,7 @@ data_chunk merkle_block::to_data(uint32_t version) const
     data_chunk data;
     const auto size = serialized_size(version);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(version, ostream);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -170,30 +165,30 @@ data_chunk merkle_block::to_data(uint32_t version) const
 
 void merkle_block::to_data(uint32_t version, std::ostream& stream) const
 {
-    ostream_writer sink(stream);
-    to_data(version, sink);
+    write::bytes::ostream out(stream);
+    to_data(version, out);
 }
 
 void merkle_block::to_data(uint32_t, writer& sink) const
 {
     header_.to_data(sink);
 
-    const auto total32 = safe_unsigned<uint32_t>(total_transactions_);
+    const auto total32 = safe_cast<uint32_t>(total_transactions_);
     sink.write_4_bytes_little_endian(total32);
-    sink.write_variable_little_endian(hashes_.size());
+    sink.write_variable(hashes_.size());
 
-    for (const auto& hash : hashes_)
-        sink.write_hash(hash);
+    for (const auto& hash: hashes_)
+        sink.write_bytes(hash);
 
-    sink.write_variable_little_endian(flags_.size());
+    sink.write_variable(flags_.size());
     sink.write_bytes(flags_);
 }
 
 size_t merkle_block::serialized_size(uint32_t) const
 {
     return header_.serialized_size() + 4u +
-        variable_uint_size(hashes_.size()) + (hash_size * hashes_.size()) +
-        variable_uint_size(flags_.size()) + flags_.size();
+        variable_size(hashes_.size()) + (hash_size * hashes_.size()) +
+        variable_size(flags_.size()) + flags_.size();
 }
 
 chain::header& merkle_block::header()

@@ -20,11 +20,9 @@
 
 #include <cstdint>
 #include <string>
+#include <bitcoin/system/assert.hpp>
 #include <bitcoin/system/message/inventory.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -133,14 +131,14 @@ void inventory_vector::to_witness()
 bool inventory_vector::from_data(uint32_t version,
     const data_chunk& data)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(version, istream);
 }
 
 bool inventory_vector::from_data(uint32_t version,
     std::istream& stream)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(version, source);
 }
 
@@ -164,26 +162,24 @@ data_chunk inventory_vector::to_data(uint32_t version) const
     data_chunk data;
     const auto size = serialized_size(version);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(version, ostream);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
     return data;
 }
 
-void inventory_vector::to_data(uint32_t version,
-    std::ostream& stream) const
+void inventory_vector::to_data(uint32_t version, std::ostream& stream) const
 {
-    ostream_writer sink(stream);
-    to_data(version, sink);
+    write::bytes::ostream out(stream);
+    to_data(version, out);
 }
 
-void inventory_vector::to_data(uint32_t ,
-    writer& sink) const
+void inventory_vector::to_data(uint32_t, writer& sink) const
 {
     const auto raw_type = inventory_vector::to_number(type_);
     sink.write_4_bytes_little_endian(raw_type);
-    sink.write_hash(hash_);
+    sink.write_bytes(hash_);
 }
 
 size_t inventory_vector::serialized_size(uint32_t version) const

@@ -18,14 +18,10 @@
  */
 #include <bitcoin/system/message/alert.hpp>
 
-#include <bitcoin/system/math/limits.hpp>
-#include <bitcoin/system/message/messages.hpp>
+#include <bitcoin/system/assert.hpp>
+#include <bitcoin/system/message/message.hpp>
 #include <bitcoin/system/message/version.hpp>
-#include <bitcoin/system/utility/assert.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -96,13 +92,13 @@ void alert::reset()
 
 bool alert::from_data(uint32_t version, const data_chunk& data)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(version, istream);
 }
 
 bool alert::from_data(uint32_t version, std::istream& stream)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(version, source);
 }
 
@@ -110,8 +106,8 @@ bool alert::from_data(uint32_t, reader& source)
 {
     reset();
 
-    payload_ = source.read_bytes(source.read_size_little_endian());
-    signature_ = source.read_bytes(source.read_size_little_endian());
+    payload_ = source.read_bytes(source.read_size());
+    signature_ = source.read_bytes(source.read_size());
 
     if (!source)
         reset();
@@ -124,7 +120,7 @@ data_chunk alert::to_data(uint32_t version) const
     data_chunk data;
     const auto size = serialized_size(version);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(version, ostream);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -133,22 +129,22 @@ data_chunk alert::to_data(uint32_t version) const
 
 void alert::to_data(uint32_t version, std::ostream& stream) const
 {
-    ostream_writer sink(stream);
-    to_data(version, sink);
+    write::bytes::ostream out(stream);
+    to_data(version, out);
 }
 
 void alert::to_data(uint32_t, writer& sink) const
 {
-    sink.write_variable_little_endian(payload_.size());
+    sink.write_variable(payload_.size());
     sink.write_bytes(payload_);
-    sink.write_variable_little_endian(signature_.size());
+    sink.write_variable(signature_.size());
     sink.write_bytes(signature_);
 }
 
 size_t alert::serialized_size(uint32_t) const
 {
-    return variable_uint_size(payload_.size()) + payload_.size() +
-        variable_uint_size(signature_.size()) + signature_.size();
+    return variable_size(payload_.size()) + payload_.size() +
+        variable_size(signature_.size()) + signature_.size();
 }
 
 data_chunk& alert::payload()

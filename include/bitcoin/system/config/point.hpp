@@ -16,13 +16,12 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef LIBBITCOIN_SYSTEM_POINT_HPP
-#define LIBBITCOIN_SYSTEM_POINT_HPP
+#ifndef LIBBITCOIN_SYSTEM_CONFIG_POINT_HPP
+#define LIBBITCOIN_SYSTEM_CONFIG_POINT_HPP
 
 #include <iostream>
 #include <string>
-#include <bitcoin/system/chain/input.hpp>
-#include <bitcoin/system/chain/output_point.hpp>
+#include <bitcoin/system/chain/chain.hpp>
 #include <bitcoin/system/define.hpp>
 
 namespace libbitcoin {

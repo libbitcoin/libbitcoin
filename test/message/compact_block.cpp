@@ -16,10 +16,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(compact_block_tests)
 
@@ -39,14 +36,16 @@ BOOST_AUTO_TEST_CASE(compact_block__constructor_2__always__equals_params)
         68644u);
 
     uint64_t nonce = 453245u;
-    const message::compact_block::short_id_list& short_ids = {
+    const message::compact_block::short_id_list& short_ids
+    {
         base16_literal("aaaaaaaaaaaa"),
         base16_literal("bbbbbbbbbbbb"),
         base16_literal("0f0f0f0f0f0f"),
         base16_literal("f0f0f0f0f0f0")
     };
 
-    const message::prefilled_transaction::list transactions = {
+    const message::prefilled_transaction::list transactions
+    {
         message::prefilled_transaction(10, chain::transaction(1, 48, {}, {})),
         message::prefilled_transaction(20, chain::transaction(2, 32, {}, {})),
         message::prefilled_transaction(30, chain::transaction(4, 16, {}, {}))
@@ -71,7 +70,8 @@ BOOST_AUTO_TEST_CASE(compact_block__constructor_3__always__equals_params)
     chain::header dup_header(header);
 
     uint64_t nonce = 453245u;
-    const message::compact_block::short_id_list short_ids = {
+    const message::compact_block::short_id_list short_ids
+    {
         base16_literal("aaaaaaaaaaaa"),
         base16_literal("bbbbbbbbbbbb"),
         base16_literal("0f0f0f0f0f0f"),
@@ -79,15 +79,14 @@ BOOST_AUTO_TEST_CASE(compact_block__constructor_3__always__equals_params)
     };
     message::compact_block::short_id_list dup_short_ids = short_ids;
 
-    const message::prefilled_transaction::list transactions = {
+    const message::prefilled_transaction::list transactions
+    {
         message::prefilled_transaction(10, chain::transaction(1, 48, {}, {})),
         message::prefilled_transaction(20, chain::transaction(2, 32, {}, {})),
         message::prefilled_transaction(30, chain::transaction(4, 16, {}, {}))
     };
     message::prefilled_transaction::list dup_transactions = transactions;
-
-    message::compact_block instance(std::move(dup_header), nonce,
-        std::move(dup_short_ids), std::move(dup_transactions));
+    message::compact_block instance(std::move(dup_header), nonce, std::move(dup_short_ids), std::move(dup_transactions));
 
     BOOST_REQUIRE(instance.is_valid());
     BOOST_REQUIRE(header == instance.header());
@@ -106,14 +105,16 @@ BOOST_AUTO_TEST_CASE(compact_block__constructor_4__always__equals_params)
         68644u);
 
     uint64_t nonce = 453245u;
-    const message::compact_block::short_id_list short_ids = {
+    const message::compact_block::short_id_list short_ids
+    {
         base16_literal("aaaaaaaaaaaa"),
         base16_literal("bbbbbbbbbbbb"),
         base16_literal("0f0f0f0f0f0f"),
         base16_literal("f0f0f0f0f0f0")
     };
 
-    const message::prefilled_transaction::list transactions = {
+    const message::prefilled_transaction::list transactions
+    {
         message::prefilled_transaction(10, chain::transaction(1, 48, {}, {})),
         message::prefilled_transaction(20, chain::transaction(2, 32, {}, {})),
         message::prefilled_transaction(30, chain::transaction(4, 16, {}, {}))
@@ -140,14 +141,16 @@ BOOST_AUTO_TEST_CASE(compact_block__constructor_5__always__equals_params)
         68644u);
 
     uint64_t nonce = 453245u;
-    const message::compact_block::short_id_list short_ids = {
+    const message::compact_block::short_id_list short_ids
+    {
         base16_literal("aaaaaaaaaaaa"),
         base16_literal("bbbbbbbbbbbb"),
         base16_literal("0f0f0f0f0f0f"),
         base16_literal("f0f0f0f0f0f0")
     };
 
-    const message::prefilled_transaction::list transactions = {
+    const message::prefilled_transaction::list transactions
+    {
         message::prefilled_transaction(10, chain::transaction(1, 48, {}, {})),
         message::prefilled_transaction(20, chain::transaction(2, 32, {}, {})),
         message::prefilled_transaction(30, chain::transaction(4, 16, {}, {}))
@@ -167,8 +170,7 @@ BOOST_AUTO_TEST_CASE(compact_block__from_data__insufficient_bytes__failure)
 {
     const data_chunk raw{ 0xab, 0xcd };
     message::compact_block instance;
-    BOOST_REQUIRE_EQUAL(false, instance.from_data(
-        message::compact_block::version_minimum, raw));
+    BOOST_REQUIRE(!instance.from_data(message::compact_block::version_minimum, raw));
 }
 
 BOOST_AUTO_TEST_CASE(compact_block__from_data__insufficient_bytes_mid_transaction__failure)
@@ -177,11 +179,10 @@ BOOST_AUTO_TEST_CASE(compact_block__from_data__insufficient_bytes_mid_transactio
         "0a0000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d619000000"
         "00003ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a"
         "221b08003e8a6300240c0100d2040000000000000400000012121212121234343434"
-        "3434565656565678789a9a02010000000100000000000001000000010000000"));
+        "3434565656565678789a9a020100000001000000000000010000000100000000"));
 
     message::compact_block instance;
-    BOOST_REQUIRE_EQUAL(false, instance.from_data(
-        message::compact_block::version_minimum, raw));
+    BOOST_REQUIRE(!instance.from_data(message::compact_block::version_minimum, raw));
 }
 
 BOOST_AUTO_TEST_CASE(compact_block__from_data__insufficient_version__failure)
@@ -198,8 +199,7 @@ BOOST_AUTO_TEST_CASE(compact_block__from_data__insufficient_version__failure)
     BOOST_REQUIRE(raw == data);
 
     message::compact_block instance;
-    BOOST_REQUIRE_EQUAL(false, instance.from_data(
-        message::compact_block::version_minimum - 1, data));
+    BOOST_REQUIRE(!instance.from_data(message::compact_block::version_minimum - 1, data));
 }
 
 BOOST_AUTO_TEST_CASE(compact_block__factory_1__valid_input__success)
@@ -215,16 +215,12 @@ BOOST_AUTO_TEST_CASE(compact_block__factory_1__valid_input__success)
     const auto data = expected.to_data(message::compact_block::version_minimum);
     BOOST_REQUIRE(raw == data);
 
-    const auto result = message::compact_block::factory(
-        message::compact_block::version_minimum, data);
+    const auto result = message::compact_block::factory( message::compact_block::version_minimum, data);
 
     BOOST_REQUIRE(result.is_valid());
     BOOST_REQUIRE(expected == result);
-    BOOST_REQUIRE_EQUAL(data.size(),
-        result.serialized_size(message::compact_block::version_minimum));
-    BOOST_REQUIRE_EQUAL(
-        expected.serialized_size(message::compact_block::version_minimum),
-        result.serialized_size(message::compact_block::version_minimum));
+    BOOST_REQUIRE_EQUAL(data.size(), result.serialized_size(message::compact_block::version_minimum));
+    BOOST_REQUIRE_EQUAL(expected.serialized_size(message::compact_block::version_minimum), result.serialized_size(message::compact_block::version_minimum));
 }
 
 BOOST_AUTO_TEST_CASE(compact_block__factory_2__valid_input__success)
@@ -240,17 +236,13 @@ BOOST_AUTO_TEST_CASE(compact_block__factory_2__valid_input__success)
     const auto data = expected.to_data(message::compact_block::version_minimum);
     BOOST_REQUIRE(raw == data);
 
-    data_source istream(data);
-    auto result = message::compact_block::factory(
-        message::compact_block::version_minimum, istream);
+    stream::in::copy istream(data);
+    auto result = message::compact_block::factory(message::compact_block::version_minimum, istream);
 
     BOOST_REQUIRE(result.is_valid());
     BOOST_REQUIRE(expected == result);
-    BOOST_REQUIRE_EQUAL(data.size(),
-        result.serialized_size(message::compact_block::version_minimum));
-    BOOST_REQUIRE_EQUAL(
-        expected.serialized_size(message::compact_block::version_minimum),
-        result.serialized_size(message::compact_block::version_minimum));
+    BOOST_REQUIRE_EQUAL(data.size(), result.serialized_size(message::compact_block::version_minimum));
+    BOOST_REQUIRE_EQUAL(expected.serialized_size(message::compact_block::version_minimum), result.serialized_size(message::compact_block::version_minimum));
 }
 
 BOOST_AUTO_TEST_CASE(compact_block__factory_3__valid_input__success)
@@ -266,18 +258,13 @@ BOOST_AUTO_TEST_CASE(compact_block__factory_3__valid_input__success)
     const auto data = expected.to_data(message::compact_block::version_minimum);
     BOOST_REQUIRE(raw == data);
 
-    data_source istream(data);
-    istream_reader source(istream);
-    const auto result = message::compact_block::factory(
-        message::compact_block::version_minimum, source);
+    read::bytes::copy source(data);
+    const auto result = message::compact_block::factory(message::compact_block::version_minimum, source);
 
     BOOST_REQUIRE(result.is_valid());
     BOOST_REQUIRE(expected == result);
-    BOOST_REQUIRE_EQUAL(data.size(),
-        result.serialized_size(message::compact_block::version_minimum));
-    BOOST_REQUIRE_EQUAL(
-        expected.serialized_size(message::compact_block::version_minimum),
-        result.serialized_size(message::compact_block::version_minimum));
+    BOOST_REQUIRE_EQUAL(data.size(), result.serialized_size(message::compact_block::version_minimum));
+    BOOST_REQUIRE_EQUAL(expected.serialized_size(message::compact_block::version_minimum), result.serialized_size(message::compact_block::version_minimum));
 }
 
 BOOST_AUTO_TEST_CASE(compact_block__header_accessor_1__always__returns_initialized_value)
@@ -290,14 +277,16 @@ BOOST_AUTO_TEST_CASE(compact_block__header_accessor_1__always__returns_initializ
         68644u);
 
     uint64_t nonce = 453245u;
-    const message::compact_block::short_id_list short_ids = {
+    const message::compact_block::short_id_list short_ids
+    {
         base16_literal("aaaaaaaaaaaa"),
         base16_literal("bbbbbbbbbbbb"),
         base16_literal("0f0f0f0f0f0f"),
         base16_literal("f0f0f0f0f0f0")
     };
 
-    const message::prefilled_transaction::list transactions = {
+    const message::prefilled_transaction::list transactions
+    {
         message::prefilled_transaction(10, chain::transaction(1, 48, {}, {})),
         message::prefilled_transaction(20, chain::transaction(2, 32, {}, {})),
         message::prefilled_transaction(30, chain::transaction(4, 16, {}, {}))
@@ -317,14 +306,16 @@ BOOST_AUTO_TEST_CASE(compact_block__header_accessor_2__always__returns_initializ
         68644u);
 
     uint64_t nonce = 453245u;
-    const message::compact_block::short_id_list short_ids = {
+    const message::compact_block::short_id_list short_ids
+    {
         base16_literal("aaaaaaaaaaaa"),
         base16_literal("bbbbbbbbbbbb"),
         base16_literal("0f0f0f0f0f0f"),
         base16_literal("f0f0f0f0f0f0")
     };
 
-    const message::prefilled_transaction::list transactions = {
+    const message::prefilled_transaction::list transactions
+    {
         message::prefilled_transaction(10, chain::transaction(1, 48, {}, {})),
         message::prefilled_transaction(20, chain::transaction(2, 32, {}, {})),
         message::prefilled_transaction(30, chain::transaction(4, 16, {}, {}))
@@ -375,14 +366,16 @@ BOOST_AUTO_TEST_CASE(compact_block__nonce_accessor__always__returns_initialized_
         68644u);
 
     uint64_t nonce = 453245u;
-    const message::compact_block::short_id_list short_ids = {
+    const message::compact_block::short_id_list short_ids
+    {
         base16_literal("aaaaaaaaaaaa"),
         base16_literal("bbbbbbbbbbbb"),
         base16_literal("0f0f0f0f0f0f"),
         base16_literal("f0f0f0f0f0f0")
     };
 
-    const message::prefilled_transaction::list transactions = {
+    const message::prefilled_transaction::list transactions
+    {
         message::prefilled_transaction(10, chain::transaction(1, 48, {}, {})),
         message::prefilled_transaction(20, chain::transaction(2, 32, {}, {})),
         message::prefilled_transaction(30, chain::transaction(4, 16, {}, {}))
@@ -412,14 +405,16 @@ BOOST_AUTO_TEST_CASE(compact_block__short_ids_accessor_1__always__returns_initia
         68644u);
 
     uint64_t nonce = 453245u;
-    const message::compact_block::short_id_list short_ids = {
+    const message::compact_block::short_id_list short_ids
+    {
         base16_literal("aaaaaaaaaaaa"),
         base16_literal("bbbbbbbbbbbb"),
         base16_literal("0f0f0f0f0f0f"),
         base16_literal("f0f0f0f0f0f0")
     };
 
-    const message::prefilled_transaction::list transactions = {
+    const message::prefilled_transaction::list transactions
+    {
         message::prefilled_transaction(10, chain::transaction(1, 48, {}, {})),
         message::prefilled_transaction(20, chain::transaction(2, 32, {}, {})),
         message::prefilled_transaction(30, chain::transaction(4, 16, {}, {}))
@@ -439,14 +434,16 @@ BOOST_AUTO_TEST_CASE(compact_block__short_ids_accessor_2__always__returns_initia
         68644u);
 
     uint64_t nonce = 453245u;
-    const message::compact_block::short_id_list short_ids = {
+    const message::compact_block::short_id_list short_ids
+    {
         base16_literal("aaaaaaaaaaaa"),
         base16_literal("bbbbbbbbbbbb"),
         base16_literal("0f0f0f0f0f0f"),
         base16_literal("f0f0f0f0f0f0")
     };
 
-    const message::prefilled_transaction::list transactions = {
+    const message::prefilled_transaction::list transactions
+    {
         message::prefilled_transaction(10, chain::transaction(1, 48, {}, {})),
         message::prefilled_transaction(20, chain::transaction(2, 32, {}, {})),
         message::prefilled_transaction(30, chain::transaction(4, 16, {}, {}))
@@ -458,7 +455,8 @@ BOOST_AUTO_TEST_CASE(compact_block__short_ids_accessor_2__always__returns_initia
 
 BOOST_AUTO_TEST_CASE(compact_block__short_ids_setter_1__roundtrip__success)
 {
-    const message::compact_block::short_id_list value = {
+    const message::compact_block::short_id_list value
+    {
         base16_literal("aaaaaaaaaaaa"),
         base16_literal("bbbbbbbbbbbb"),
         base16_literal("0f0f0f0f0f0f"),
@@ -473,7 +471,8 @@ BOOST_AUTO_TEST_CASE(compact_block__short_ids_setter_1__roundtrip__success)
 
 BOOST_AUTO_TEST_CASE(compact_block__short_ids_setter_2__roundtrip__success)
 {
-    const message::compact_block::short_id_list value = {
+    const message::compact_block::short_id_list value
+    {
         base16_literal("aaaaaaaaaaaa"),
         base16_literal("bbbbbbbbbbbb"),
         base16_literal("0f0f0f0f0f0f"),
@@ -497,14 +496,16 @@ BOOST_AUTO_TEST_CASE(compact_block__transactions_accessor_1__always__returns_ini
         68644u);
 
     uint64_t nonce = 453245u;
-    const message::compact_block::short_id_list short_ids = {
+    const message::compact_block::short_id_list short_ids
+    {
         base16_literal("aaaaaaaaaaaa"),
         base16_literal("bbbbbbbbbbbb"),
         base16_literal("0f0f0f0f0f0f"),
         base16_literal("f0f0f0f0f0f0")
     };
 
-    const message::prefilled_transaction::list transactions = {
+    const message::prefilled_transaction::list transactions
+    {
         message::prefilled_transaction(10, chain::transaction(1, 48, {}, {})),
         message::prefilled_transaction(20, chain::transaction(2, 32, {}, {})),
         message::prefilled_transaction(30, chain::transaction(4, 16, {}, {}))
@@ -524,14 +525,16 @@ BOOST_AUTO_TEST_CASE(compact_block__transactions_accessor_2__always__returns_ini
         68644u);
 
     uint64_t nonce = 453245u;
-    const message::compact_block::short_id_list short_ids = {
+    const message::compact_block::short_id_list short_ids
+    {
         base16_literal("aaaaaaaaaaaa"),
         base16_literal("bbbbbbbbbbbb"),
         base16_literal("0f0f0f0f0f0f"),
         base16_literal("f0f0f0f0f0f0")
     };
 
-    const message::prefilled_transaction::list transactions = {
+    const message::prefilled_transaction::list transactions
+    {
         message::prefilled_transaction(10, chain::transaction(1, 48, {}, {})),
         message::prefilled_transaction(20, chain::transaction(2, 32, {}, {})),
         message::prefilled_transaction(30, chain::transaction(4, 16, {}, {}))
@@ -543,7 +546,8 @@ BOOST_AUTO_TEST_CASE(compact_block__transactions_accessor_2__always__returns_ini
 
 BOOST_AUTO_TEST_CASE(compact_block__transactions_setter_1__roundtrip__success)
 {
-    const message::prefilled_transaction::list value = {
+    const message::prefilled_transaction::list value
+    {
         message::prefilled_transaction(10, chain::transaction(1, 48, {}, {})),
         message::prefilled_transaction(20, chain::transaction(2, 32, {}, {})),
         message::prefilled_transaction(30, chain::transaction(4, 16, {}, {}))
@@ -557,7 +561,8 @@ BOOST_AUTO_TEST_CASE(compact_block__transactions_setter_1__roundtrip__success)
 
 BOOST_AUTO_TEST_CASE(compact_block__transactions_setter_2__roundtrip__success)
 {
-    const message::prefilled_transaction::list value = {
+    const message::prefilled_transaction::list value
+    {
         message::prefilled_transaction(10, chain::transaction(1, 48, {}, {})),
         message::prefilled_transaction(20, chain::transaction(2, 32, {}, {})),
         message::prefilled_transaction(30, chain::transaction(4, 16, {}, {}))
@@ -580,14 +585,16 @@ BOOST_AUTO_TEST_CASE(compact_block__operator_assign_equals__always__matches_equi
         68644u);
 
     uint64_t nonce = 453245u;
-    const message::compact_block::short_id_list short_ids = {
+    const message::compact_block::short_id_list short_ids
+    {
         base16_literal("aaaaaaaaaaaa"),
         base16_literal("bbbbbbbbbbbb"),
         base16_literal("0f0f0f0f0f0f"),
         base16_literal("f0f0f0f0f0f0")
     };
 
-    const message::prefilled_transaction::list transactions = {
+    const message::prefilled_transaction::list transactions
+    {
         message::prefilled_transaction(10, chain::transaction(1, 48, {}, {})),
         message::prefilled_transaction(20, chain::transaction(2, 32, {}, {})),
         message::prefilled_transaction(30, chain::transaction(4, 16, {}, {}))
@@ -654,7 +661,7 @@ BOOST_AUTO_TEST_CASE(compact_block__operator_boolean_equals__differs__returns_fa
         });
 
     message::compact_block instance;
-    BOOST_REQUIRE_EQUAL(false, instance == expected);
+    BOOST_REQUIRE(!(instance == expected));
 }
 
 BOOST_AUTO_TEST_CASE(compact_block__operator_boolean_not_equals__duplicates__returns_false)
@@ -680,7 +687,7 @@ BOOST_AUTO_TEST_CASE(compact_block__operator_boolean_not_equals__duplicates__ret
         });
 
     message::compact_block instance(expected);
-    BOOST_REQUIRE_EQUAL(false, instance != expected);
+    BOOST_REQUIRE(!(instance != expected));
 }
 
 BOOST_AUTO_TEST_CASE(compact_block__operator_boolean_not_equals__differs__returns_true)

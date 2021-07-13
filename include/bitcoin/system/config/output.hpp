@@ -16,15 +16,15 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef LIBBITCOIN_SYSTEM_OUTPUT_HPP
-#define LIBBITCOIN_SYSTEM_OUTPUT_HPP
+#ifndef LIBBITCOIN_SYSTEM_CONFIG_OUTPUT_HPP
+#define LIBBITCOIN_SYSTEM_CONFIG_OUTPUT_HPP
 
 #include <cstdint>
 #include <iostream>
 #include <string>
+#include <bitcoin/system/chain/chain.hpp>
+#include <bitcoin/system/crypto/crypto.hpp>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/chain/script.hpp>
-#include <bitcoin/system/math/hash.hpp>
 
 namespace libbitcoin {
 namespace system {

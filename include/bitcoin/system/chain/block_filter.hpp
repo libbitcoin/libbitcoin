@@ -24,8 +24,9 @@
 
 #include <istream>
 #include <memory>
+#include <bitcoin/system/crypto/crypto.hpp>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/math/hash.hpp>
+#include <bitcoin/system/math/math.hpp>
 
 namespace libbitcoin {
 namespace system {

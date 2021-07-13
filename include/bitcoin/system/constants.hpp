@@ -16,167 +16,158 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef LIBBITCOIN_CONSTANTS_HPP
-#define LIBBITCOIN_CONSTANTS_HPP
+#ifndef LIBBITCOIN_SYSTEM_CONSTANTS_HPP
+#define LIBBITCOIN_SYSTEM_CONSTANTS_HPP
 
 #include <cstddef>
 #include <cstdint>
-#include <bitcoin/system/compat.hpp>
-#include <bitcoin/system/config/checkpoint.hpp>
+#include <limits>
+#include <type_traits>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/math/hash.hpp>
-#include <bitcoin/system/message/network_address.hpp>
-#include <bitcoin/system/version.hpp>
 
 namespace libbitcoin {
 
-// This guards assumptions within the codebase.
+// Guard assumptions within the codebase.
 static_assert(sizeof(size_t) == sizeof(uint32_t) ||
     sizeof(size_t) == sizeof(uint64_t), "unsupported size_t");
 
-#define BC_USER_AGENT "/libbitcoin:" LIBBITCOIN_SYSTEM_VERSION "/"
+// Integral value limits.
+constexpr int64_t min_int64 = std::numeric_limits<int64_t>::min();
+constexpr int64_t max_int64 = std::numeric_limits<int64_t>::max();
+constexpr int32_t min_int32 = std::numeric_limits<int32_t>::min();
+constexpr int32_t max_int32 = std::numeric_limits<int32_t>::max();
+constexpr int16_t min_int16 = std::numeric_limits<int16_t>::min();
+constexpr int16_t max_int16 = std::numeric_limits<int16_t>::max();
+constexpr uint64_t max_uint64 = std::numeric_limits<uint64_t>::max();
+constexpr uint32_t max_uint32 = std::numeric_limits<uint32_t>::max();
+constexpr uint16_t max_uint16 = std::numeric_limits<uint16_t>::max();
+constexpr uint8_t max_uint8 = std::numeric_limits<uint8_t>::max();
+constexpr uint64_t max_size_t = std::numeric_limits<size_t>::max();
 
-// Generic constants.
-//-----------------------------------------------------------------------------
+// The number of bits in a byte (uint8_t)
+constexpr uint8_t byte_bits = 8;
 
-BC_CONSTEXPR int64_t min_int64 = MIN_INT64;
-BC_CONSTEXPR int64_t max_int64 = MAX_INT64;
-BC_CONSTEXPR int32_t min_int32 = MIN_INT32;
-BC_CONSTEXPR int32_t max_int32 = MAX_INT32;
-BC_CONSTEXPR uint64_t max_uint64 = MAX_UINT64;
-BC_CONSTEXPR uint32_t max_uint32 = MAX_UINT32;
-BC_CONSTEXPR uint16_t max_uint16 = MAX_UINT16;
-BC_CONSTEXPR uint8_t max_uint8 = MAX_UINT8;
-BC_CONSTEXPR uint64_t max_size_t = BC_MAX_SIZE;
-BC_CONSTEXPR uint8_t byte_bits = 8;
+// Use zero, one, two when any unsigned or size_t value is required.
+constexpr size_t zero = 0;
+constexpr size_t one = 1;
+constexpr size_t two = 2;
 
-// Consensus sentinels.
-//-----------------------------------------------------------------------------
+// Use negative_one when returning negative one (or any negative) as sentinel.
+constexpr int32_t negative_one = -1;
 
-BC_CONSTEXPR uint32_t no_previous_output = max_uint32;
-BC_CONSTEXPR uint32_t max_input_sequence = max_uint32;
-BC_CONSTEXPR uint64_t sighash_null_value = max_uint64;
-
-// Script/interpreter constants.
-//-----------------------------------------------------------------------------
-
-// Consensus
-BC_CONSTEXPR size_t max_counted_ops = 201;
-BC_CONSTEXPR size_t max_stack_size = 1000;
-BC_CONSTEXPR size_t max_script_size = 10000;
-BC_CONSTEXPR size_t max_push_data_size = 520;
-BC_CONSTEXPR size_t max_script_public_keys = 20;
-BC_CONSTEXPR size_t multisig_default_sigops = 20;
-BC_CONSTEXPR size_t max_number_size = 4;
-BC_CONSTEXPR size_t max_check_locktime_verify_number_size = 5;
-BC_CONSTEXPR size_t max_check_sequence_verify_number_size = 5;
-
-// Policy.
-BC_CONSTEXPR size_t max_null_data_size = 80;
-
-// Various validation constants.
-//-----------------------------------------------------------------------------
-
-BC_CONSTEXPR size_t min_coinbase_size = 2;
-BC_CONSTEXPR size_t max_coinbase_size = 100;
-BC_CONSTEXPR size_t coinbase_maturity = 100;
-BC_CONSTEXPR size_t median_time_past_interval = 11;
-BC_CONSTEXPR size_t locktime_threshold = 500000000;
-BC_CONSTEXPR size_t max_block_size = 1000000;
-BC_CONSTEXPR size_t max_sigops_factor = 50;
-BC_CONSTEXPR size_t max_block_sigops = max_block_size / max_sigops_factor;
-BC_CONSTEXPR uint64_t satoshi_per_bitcoin = 100000000;
-
-// Relative locktime constants.
-//-----------------------------------------------------------------------------
-
-BC_CONSTEXPR size_t relative_locktime_min_version = 2;
-BC_CONSTEXPR size_t relative_locktime_seconds_shift = 9;
-BC_CONSTEXPR uint32_t relative_locktime_mask = 0x0000ffff;
-BC_CONSTEXPR uint32_t relative_locktime_disabled = 0x80000000;
-BC_CONSTEXPR uint32_t relative_locktime_time_locked = 0x00400000;
-
-// Fork constants.
-//-----------------------------------------------------------------------------
-
-// github.com/bitcoin/bips/blob/master/bip-0030.mediawiki#specification
-static const system::config::checkpoint mainnet_bip30_exception_checkpoint1
+template <typename Type>
+constexpr bool is_zero(Type value) noexcept
 {
-    "00000000000a4d0a398161ffc163c503763b1f4360639393e0e4c8e300e0caec", 91842
-};
-static const system::config::checkpoint mainnet_bip30_exception_checkpoint2
+    return value == 0;
+}
+
+template <typename Type>
+constexpr bool is_one(Type value) noexcept
 {
-    "00000000000743f190a18c5577a3c2d2a1f610ae9601ac046a38084ccb7cd721", 91880
-};
+    return value == 1;
+}
 
-// Network protocol constants.
-//-----------------------------------------------------------------------------
+template <typename Type>
+constexpr Type lo_bit(Type value) noexcept
+{
+    return value % 2;
+}
 
-// Explicit size.
-BC_CONSTEXPR size_t command_size = 12;
+template <typename Type>
+constexpr bool is_even(Type value) noexcept
+{
+    return is_zero(lo_bit(value));
+}
 
-// Explicit limits.
-BC_CONSTEXPR size_t max_address = 1000;
-BC_CONSTEXPR size_t max_filter_add = 520;
-BC_CONSTEXPR size_t max_filter_functions = 50;
-BC_CONSTEXPR size_t max_filter_hashes = 2000;
-BC_CONSTEXPR size_t max_filter_load = 36000;
-BC_CONSTEXPR size_t max_get_blocks = 500;
-BC_CONSTEXPR size_t max_get_headers = 2000;
-BC_CONSTEXPR size_t max_get_data = 50000;
-BC_CONSTEXPR size_t max_inventory = 50000;
-BC_CONSTEXPR size_t max_get_compact_filter_headers = 1999;
-BC_CONSTEXPR size_t max_get_compact_filters = 99;
+template <typename Type>
+constexpr bool is_odd(Type value) noexcept
+{
+    return !is_even(value);
+}
 
-// compact filter checkpoint interval
-BC_CONSTEXPR size_t compact_filter_checkpoint_interval = 1000;
+template <typename Type>
+constexpr bool is_integer()
+{
+    return std::numeric_limits<Type>::is_integer &&
+        !std::is_same<bool, Type>::value;
+}
 
-// The minimum safe length of a seed in bits (multiple of 8).
-BC_CONSTEXPR size_t minimum_seed_bits = 128;
+template <typename Type>
+constexpr bool is_null(Type value) noexcept
+{
+    return value == nullptr;
+}
 
-// The minimum safe length of a seed in bytes (16).
-BC_CONSTEXPR size_t minimum_seed_size = minimum_seed_bits / byte_bits;
+template <typename Type>
+constexpr Type to_bits(Type bytes) noexcept
+{
+    return bytes * 8;
+}
 
-// Effective limit given a 32 bit chain height boundary: 10 + log2(2^32) + 1.
-BC_CONSTEXPR size_t max_locator = 43;
+template <typename Type>
+constexpr Type to_bytes(Type bits) noexcept
+{
+    return bits / 8;
+}
 
-// Variable integer prefix sentinels.
-BC_CONSTEXPR uint8_t varint_two_bytes = 0xfd;
-BC_CONSTEXPR uint8_t varint_four_bytes = 0xfe;
-BC_CONSTEXPR uint8_t varint_eight_bytes = 0xff;
+template <typename Type>
+constexpr Type to_half(Type value) noexcept
+{
+    return value / 2;
+}
 
-// String padding sentinel.
-BC_CONSTEXPR uint8_t string_terminator = 0x00;
+template <typename Type = int>
+constexpr Type to_int(bool value) noexcept
+{
+    return value ? 1 : 0;
+}
 
-// Witness serialization values (bip141).
-//-----------------------------------------------------------------------------
+template <typename Type>
+constexpr bool to_bool(Type value) noexcept
+{
+    return !is_zero(value);
+}
 
-BC_CONSTEXPR uint8_t witness_marker = 0x00;
-BC_CONSTEXPR uint8_t witness_flag = 0x01;
-BC_CONSTEXPR uint32_t witness_head = 0xaa21a9ed;
-BC_CONSTEXPR size_t fast_sigops_factor = 4;
-BC_CONSTEXPR size_t max_fast_sigops = fast_sigops_factor * max_block_sigops;
-BC_CONSTEXPR size_t light_weight_factor = 4;
-BC_CONSTEXPR size_t max_block_weight = light_weight_factor * max_block_size;
-BC_CONSTEXPR size_t base_size_contribution = 3;
-BC_CONSTEXPR size_t total_size_contribution = 1;
-BC_CONSTEXPR size_t min_witness_program = 2;
-BC_CONSTEXPR size_t max_witness_program = 40;
+template <typename Type>
+constexpr Type add1(Type value) noexcept
+{
+    return value + 1;
+}
 
-// Golomb-Rice related values (bip158).
-//-----------------------------------------------------------------------------
+template <typename Type>
+constexpr Type sub1(Type value) noexcept
+{
+    return value - 1;
+}
 
-BC_CONSTEXPR uint8_t neutrino_filter_type = 0x00;
-BC_CONSTEXPR uint8_t golomb_bits = 19;
-BC_CONSTEXPR uint64_t golomb_target_false_positive_rate = 784931;
+template <typename Type>
+constexpr size_t width() noexcept
+{
+    // This is not always a logical size for non-integral types.
+    return to_bits(sizeof(Type));
+}
 
-// Siphash related values.
-//-----------------------------------------------------------------------------
+template <typename Type>
+constexpr size_t width(Type value) noexcept
+{
+    // This is not always a logical size for non-integral types.
+    return to_bits(sizeof(value));
+}
 
-BC_CONSTEXPR uint64_t siphash_magic_0 = 0x736f6d6570736575;
-BC_CONSTEXPR uint64_t siphash_magic_1 = 0x646f72616e646f6d;
-BC_CONSTEXPR uint64_t siphash_magic_2 = 0x6c7967656e657261;
-BC_CONSTEXPR uint64_t siphash_magic_3 = 0x7465646279746573;
+/// Variable integer prefix sentinels.
+constexpr uint8_t varint_two_bytes = 0xfd;
+constexpr uint8_t varint_four_bytes = 0xfe;
+constexpr uint8_t varint_eight_bytes = 0xff;
+
+/// Determine the bitcoin variable-serialized size of a given value.
+constexpr size_t variable_size(uint64_t value)
+{
+    // C++11: single return required for constexpr.
+    return (value < varint_two_bytes) ? sizeof(uint8_t) :
+        ((value <= max_uint16) ? sizeof(uint8_t) + sizeof(uint16_t) :
+            ((value <= max_uint32) ? sizeof(uint8_t) + sizeof(uint32_t) :
+                sizeof(uint8_t) + sizeof(uint64_t)));
+}
 
 } // namespace libbitcoin
 

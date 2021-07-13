@@ -16,15 +16,13 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
-using namespace bc::system::machine;
-
-data_chunk valid_raw_operation = to_chunk(base16_literal("0900ff11ee22bb33aa44"));
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(operation_tests)
+
+using namespace bc::system::chain;
+
+const auto valid_raw_operation = base16_chunk("0900ff11ee22bb33aa44");
 
 BOOST_AUTO_TEST_CASE(operation__constructor_1__always__returns_default_initialized)
 {
@@ -37,7 +35,7 @@ BOOST_AUTO_TEST_CASE(operation__constructor_1__always__returns_default_initializ
 
 BOOST_AUTO_TEST_CASE(operation__constructor_2__valid_input__returns_input_initialized)
 {
-    const auto data = to_chunk(base16_literal("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
+    const auto data = base16_chunk("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f");
     auto dup_data = data;
     operation instance(std::move(dup_data));
 
@@ -48,7 +46,7 @@ BOOST_AUTO_TEST_CASE(operation__constructor_2__valid_input__returns_input_initia
 
 BOOST_AUTO_TEST_CASE(operation__constructor_3__valid_input__returns_input_initialized)
 {
-    const auto data = to_chunk(base16_literal("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
+    const auto data = base16_chunk("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f");
     operation instance(data);
 
     BOOST_REQUIRE(instance.is_valid());
@@ -58,7 +56,7 @@ BOOST_AUTO_TEST_CASE(operation__constructor_3__valid_input__returns_input_initia
 
 BOOST_AUTO_TEST_CASE(operation__constructor_4__valid_input__returns_input_initialized)
 {
-    const operation expected(to_chunk(base16_literal("23156214")));
+    const operation expected(base16_chunk("23156214"));
     operation instance(expected);
 
     BOOST_REQUIRE(instance.is_valid());
@@ -67,7 +65,7 @@ BOOST_AUTO_TEST_CASE(operation__constructor_4__valid_input__returns_input_initia
 
 BOOST_AUTO_TEST_CASE(operation__constructor_5__valid_input__returns_input_initialized)
 {
-    operation expected(to_chunk(base16_literal("23156214")));
+    operation expected(base16_chunk("23156214"));
     operation instance(std::move(expected));
 
     BOOST_REQUIRE(instance.is_valid());
@@ -84,8 +82,8 @@ BOOST_AUTO_TEST_CASE(operation__from_data__insufficient_bytes__failure)
 
 BOOST_AUTO_TEST_CASE(operation__from_data__roundtrip_push_size_0__success)
 {
-    const auto data0 = to_chunk(base16_literal(""));
-    const auto raw_operation = to_chunk(base16_literal("00"));
+    const auto data0 = base16_chunk("");
+    const auto raw_operation = base16_chunk("00");
     operation instance;
 
     BOOST_REQUIRE(instance.from_data(raw_operation));
@@ -103,7 +101,7 @@ BOOST_AUTO_TEST_CASE(operation__from_data__roundtrip_push_size_0__success)
 BOOST_AUTO_TEST_CASE(operation__from_data__roundtrip_push_size_75__success)
 {
     const auto data75 = data_chunk(75, '.');
-    const auto raw_operation = build_chunk({ base16_literal("4b"), data75 });
+    const auto raw_operation = splice(base16_literal("4b"), data75);
     operation instance;
 
     BOOST_REQUIRE(instance.from_data(raw_operation));
@@ -187,7 +185,7 @@ BOOST_AUTO_TEST_CASE(operation__from_data__roundtrip_push_positive_16__success)
 BOOST_AUTO_TEST_CASE(operation__from_data__roundtrip_push_one_size__success)
 {
     const auto data255 = data_chunk(255, '.');
-    const auto raw_operation = build_chunk({ base16_literal("4c" "ff"), data255 });
+    const auto raw_operation = splice(base16_literal("4c" "ff"), data255);
     operation instance;
 
     BOOST_REQUIRE(instance.from_data(raw_operation));
@@ -205,7 +203,7 @@ BOOST_AUTO_TEST_CASE(operation__from_data__roundtrip_push_one_size__success)
 BOOST_AUTO_TEST_CASE(operation__from_data__roundtrip_push_two_size__success)
 {
     const auto data520 = data_chunk(520, '.');
-    const auto raw_operation = build_chunk({ base16_literal("4d" "0802"), data520 });
+    const auto raw_operation = splice(base16_literal("4d" "0802"), data520);
     operation instance;
 
     BOOST_REQUIRE(instance.from_data(raw_operation));
@@ -223,7 +221,7 @@ BOOST_AUTO_TEST_CASE(operation__from_data__roundtrip_push_two_size__success)
 BOOST_AUTO_TEST_CASE(operation__from_data__roundtrip_push_four_size__success)
 {
     const auto data520 = data_chunk(520, '.');
-    const auto raw_operation = build_chunk({ base16_literal("4e" "08020000"), data520 });
+    const auto raw_operation = splice(base16_literal("4e" "08020000"), data520);
     operation instance;
 
     BOOST_REQUIRE(instance.from_data(raw_operation));
@@ -249,7 +247,7 @@ BOOST_AUTO_TEST_CASE(operation__factory_1__roundtrip__success)
 
 BOOST_AUTO_TEST_CASE(operation__factory_2__roundtrip__success)
 {
-    data_source istream(valid_raw_operation);
+    stream::in::copy istream(valid_raw_operation);
     auto operation = operation::factory(istream);
 
     BOOST_REQUIRE(operation.is_valid());
@@ -259,8 +257,7 @@ BOOST_AUTO_TEST_CASE(operation__factory_2__roundtrip__success)
 
 BOOST_AUTO_TEST_CASE(operation__factory_3__roundtrip__success)
 {
-    data_source istream(valid_raw_operation);
-    istream_reader source(istream);
+    read::bytes::copy source(valid_raw_operation);
     auto operation = operation::factory(source);
 
     BOOST_REQUIRE(operation.is_valid());
@@ -402,25 +399,25 @@ BOOST_AUTO_TEST_CASE(operation__to_string__push_four_size_0x112233__4_0x112233)
 BOOST_AUTO_TEST_CASE(operation__to_string__nop2_no_rules__nop2)
 {
     operation value(opcode::nop2);
-    BOOST_REQUIRE_EQUAL(value.to_string(machine::rule_fork::no_rules), "nop2");
+    BOOST_REQUIRE_EQUAL(value.to_string(chain::rule_fork::no_rules), "nop2");
 }
 
 BOOST_AUTO_TEST_CASE(operation__to_string__nop2_bip65_rule__checklocktimeverify)
 {
     operation value(opcode::nop2);
-    BOOST_REQUIRE_EQUAL(value.to_string(machine::rule_fork::bip65_rule), "checklocktimeverify");
+    BOOST_REQUIRE_EQUAL(value.to_string(chain::rule_fork::bip65_rule), "checklocktimeverify");
 }
 
 BOOST_AUTO_TEST_CASE(operation__to_string__nop3_no_rules__nop3)
 {
     operation value(opcode::nop3);
-    BOOST_REQUIRE_EQUAL(value.to_string(machine::rule_fork::no_rules), "nop3");
+    BOOST_REQUIRE_EQUAL(value.to_string(chain::rule_fork::no_rules), "nop3");
 }
 
 BOOST_AUTO_TEST_CASE(operation__to_string__nop3_bip112_rule__checksequenceverify)
 {
     operation value(opcode::nop3);
-    BOOST_REQUIRE_EQUAL(value.to_string(machine::rule_fork::bip112_rule), "checksequenceverify");
+    BOOST_REQUIRE_EQUAL(value.to_string(chain::rule_fork::bip112_rule), "checksequenceverify");
 }
 
 // from_string

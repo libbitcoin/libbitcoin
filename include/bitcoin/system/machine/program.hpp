@@ -20,15 +20,11 @@
 #define LIBBITCOIN_SYSTEM_MACHINE_PROGRAM_HPP
 
 #include <cstdint>
-#include <bitcoin/system/chain/script.hpp>
-#include <bitcoin/system/chain/transaction.hpp>
+#include <bitcoin/system/chain/chain.hpp>
 #include <bitcoin/system/constants.hpp>
+#include <bitcoin/system/data/data.hpp>
 #include <bitcoin/system/define.hpp>
 #include <bitcoin/system/machine/number.hpp>
-#include <bitcoin/system/machine/opcode.hpp>
-#include <bitcoin/system/machine/operation.hpp>
-#include <bitcoin/system/machine/script_version.hpp>
-#include <bitcoin/system/utility/data.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -38,7 +34,8 @@ class BC_API program
 {
 public:
     typedef data_stack::value_type value_type;
-    typedef operation::iterator op_iterator;
+    typedef chain::operation::list operations;
+    typedef chain::operation::iterator op_iterator;
 
     // Older libstdc++ does not allow erase with const iterator.
     // This is a bug that requires we up the minimum compiler version.
@@ -63,7 +60,7 @@ public:
     /// Create an instance with initialized stack (witness run, v0 by default).
     program(const chain::script& script, const chain::transaction& transaction,
         uint32_t input_index, uint32_t forks, data_stack&& stack,
-        uint64_t value, script_version version=script_version::zero);
+        uint64_t value, chain::script_version version=chain::script_version::zero);
 
     /// Create using copied tx, input, forks, value, stack (prevout run).
     program(const chain::script& script, const program& other);
@@ -78,7 +75,7 @@ public:
     uint32_t forks() const;
     uint32_t input_index() const;
     uint64_t value() const;
-    script_version version() const;
+    chain::script_version version() const;
     const chain::transaction& transaction() const;
 
     /// Program registers.
@@ -89,10 +86,10 @@ public:
 
     /// Instructions.
     code evaluate();
-    code evaluate(const operation& op);
-    bool increment_operation_count(const operation& op);
+    code evaluate(const chain::operation& op);
+    bool increment_operation_count(const chain::operation& op);
     bool increment_operation_count(int32_t public_keys);
-    bool set_jump_register(const operation& op, int32_t offset);
+    bool set_jump_register(const chain::operation& op, int32_t offset);
 
     // Primary stack.
     //-------------------------------------------------------------------------
@@ -105,7 +102,7 @@ public:
     /// Primary pop.
     data_chunk pop();
     bool pop(int32_t& out_value);
-    bool pop(number& out_number, size_t maxiumum_size=max_number_size);
+    bool pop(number& out_number, size_t maxiumum_size=chain::max_number_size);
     bool pop_binary(number& first, number& second);
     bool pop_ternary(number& first, number& second, number& third);
     bool pop_position(stack_iterator& out_position);
@@ -122,11 +119,11 @@ public:
     bool stack_true(bool clean) const;
     bool stack_result(bool clean) const;
     bool is_stack_overflow() const;
-    bool if_(const operation& op) const;
+    bool if_(const chain::operation& op) const;
     const value_type& item(size_t index) /*const*/;
-    bool top(number& out_number, size_t maxiumum_size=max_number_size) /*const*/;
+    bool top(number& out_number, size_t maxiumum_size=chain::max_number_size) /*const*/;
     stack_iterator position(size_t index) /*const*/;
-    operation::list subscript() const;
+    operations subscript() const;
     size_t size() const;
 
     // Alternate stack.
@@ -146,7 +143,7 @@ public:
     bool succeeded() const;
 
 private:
-    // A space-efficient dynamic bitset (specialized).
+    // A space-efficient dynamic bitset (specialized by c++ std libr).
     typedef std::vector<bool> bool_stack;
 
     bool stack_to_bool(bool clean) const;
@@ -156,7 +153,7 @@ private:
     const uint32_t input_index_;
     const uint32_t forks_;
     const uint64_t value_;
-    const script_version version_;
+    const chain::script_version version_;
 
     size_t negative_count_;
     size_t operation_count_;
@@ -169,8 +166,5 @@ private:
 } // namespace machine
 } // namespace system
 } // namespace libbitcoin
-
-
-#include <bitcoin/system/impl/machine/program.ipp>
 
 #endif

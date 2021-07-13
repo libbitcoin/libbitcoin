@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2011-2019 libbitcoin developers (see AUTHORS)
+ * Copyright (c) 2011-2021 libbitcoin developers (see AUTHORS)
  *
  * This file is part of libbitcoin.
  *
@@ -19,30 +19,240 @@
 #include <bitcoin/system/machine/number.hpp>
 
 #include <cstdint>
+#include <cstdlib>
+#include <bitcoin/system/assert.hpp>
+#include <bitcoin/system/chain/chain.hpp>
+#include <bitcoin/system/constants.hpp>
+#include <bitcoin/system/data/data.hpp>
+#include <bitcoin/system/math/math.hpp>
+#include <bitcoin/system/serial/serial.hpp>
 
 namespace libbitcoin {
 namespace system {
 namespace machine {
 
-const uint8_t number::negative_1 = negative_sign | positive_1;
-const uint8_t number::positive_0 = 0;
-const uint8_t number::positive_1 = 1;
-const uint8_t number::positive_2 = 2;
-const uint8_t number::positive_3 = 3;
-const uint8_t number::positive_4 = 4;
-const uint8_t number::positive_5 = 5;
-const uint8_t number::positive_6 = 6;
-const uint8_t number::positive_7 = 7;
-const uint8_t number::positive_8 = 8;
-const uint8_t number::positive_9 = 9;
-const uint8_t number::positive_10 = 10;
-const uint8_t number::positive_11 = 11;
-const uint8_t number::positive_12 = 12;
-const uint8_t number::positive_13 = 13;
-const uint8_t number::positive_14 = 14;
-const uint8_t number::positive_15 = 15;
-const uint8_t number::positive_16 = 16;
-const uint8_t number::negative_sign = 0x80;
+using namespace bc::system::chain;
+
+// TODO: create unsigned ceilinged_add and floored_sbtract.
+static const uint64_t unsigned_max_int64 = max_int64;
+static const uint64_t absolute_min_int64 = min_int64;
+
+number::number()
+  : number(numbers::positive_0)
+{
+}
+
+number::number(int64_t value)
+  : value_(value)
+{
+}
+
+// Properties
+//-----------------------------------------------------------------------------
+
+// The data is interpreted as little-endian.
+bool number::set_data(const data_chunk& data, size_t max_size)
+{
+    if (data.size() > max_size)
+        return false;
+
+    value_ = 0;
+
+    if (data.empty())
+        return true;
+
+    value_ = from_little_endian<int64_t>(data);
+    const auto negative_bit_set = get_left(data.back());
+
+    // Clear the negative bit and negate the value.
+    // The bit is the leftmost of the bits decoded (offset from right).
+    if (negative_bit_set)
+        value_ = -set_right(value_, sub1(to_bits(data.size())), false);
+
+    return true;
+}
+
+// The result is little-endian.
+data_chunk number::data() const
+{
+    if (is_zero(value_))
+        return {};
+
+    auto data = to_little_endian_chunk(absolute(value_));
+    const auto negative_bit_set = get_left(data.back());
+    const auto negative = is_negative(value_);
+
+    // Push a 0x80 byte that will be popped off when converting to an integral.
+    if (negative_bit_set && negative)
+        data.push_back(numbers::negative_sign);
+
+    // Push a 0x00 byte to make the most significant byte non-negative again.
+    else if (negative_bit_set)
+        data.push_back(numbers::positive_0);
+
+    // Set the negative bit, since it will be subtracted and interpreted as
+    // a negative when converting to an integral.
+    else if (negative)
+        set_left(data.back());
+
+    return data;
+}
+
+int32_t number::int32() const
+{
+    return limit<int32_t>(value_);
+}
+
+int64_t number::int64() const
+{
+    return value_;
+}
+
+// Stack Helpers
+//-----------------------------------------------------------------------------
+
+bool number::is_true() const
+{
+    return !is_zero(value_);
+}
+
+bool number::is_false() const
+{
+    return is_zero(value_);
+}
+
+// Operators
+//-----------------------------------------------------------------------------
+
+bool number::operator>(int64_t value) const
+{
+    return value_ > value;
+}
+
+bool number::operator<(int64_t value) const
+{
+    return value_ < value;
+}
+
+bool number::operator>=(int64_t value) const
+{
+    return value_ >= value;
+}
+
+bool number::operator<=(int64_t value) const
+{
+    return value_ <= value;
+}
+
+bool number::operator==(int64_t value) const
+{
+    return value_ == value;
+}
+
+bool number::operator!=(int64_t value) const
+{
+    return value_ != value;
+}
+
+bool number::operator>(const number& other) const
+{
+    return operator>(other.value_);
+}
+
+bool number::operator<(const number& other) const
+{
+    return operator<(other.value_);
+}
+
+bool number::operator>=(const number& other) const
+{
+    return operator>=(other.value_);
+}
+
+bool number::operator<=(const number& other) const
+{
+    return operator<=(other.value_);
+}
+
+bool number::operator==(const number& other) const
+{
+    return operator==(other.value_);
+}
+
+bool number::operator!=(const number& other) const
+{
+    return operator!=(other.value_);
+}
+
+number number::operator+(int64_t value) const
+{
+    BITCOIN_ASSERT_MSG(is_zero(value) ||
+        (value > 0 && value_ <= max_int64 - value) ||
+        (value < 0 && value_ >= min_int64 - value), "overflow");
+
+    return number(value_ + value);
+}
+
+number number::operator-(int64_t value) const
+{
+    BITCOIN_ASSERT_MSG(is_zero(value) ||
+        (value > 0 && value_ >= min_int64 + value) ||
+        (value < 0 && value_ <= max_int64 + value), "underflow");
+
+    return number(value_ - value);
+}
+
+number number::operator+(const number& other) const
+{
+    return operator+(other.value_);
+}
+
+number number::operator-(const number& other) const
+{
+    return operator-(other.value_);
+}
+
+number number::operator+() const
+{
+    return *this;
+}
+
+number number::operator-() const
+{
+    BITCOIN_ASSERT_MSG(value_ != min_int64, "out of range");
+
+    return number(-value_);
+}
+
+number& number::operator+=(const number& other)
+{
+    return operator+=(other.value_);
+}
+
+number& number::operator-=(const number& other)
+{
+    return operator-=(other.value_);
+}
+
+number& number::operator+=(int64_t value)
+{
+    BITCOIN_ASSERT_MSG(is_zero(value) ||
+        (value > 0 && value_ <= max_int64 - value) ||
+        (value < 0 && value_ >= min_int64 - value), "overflow");
+
+    value_ += value;
+    return *this;
+}
+
+number& number::operator-=(int64_t value)
+{
+    BITCOIN_ASSERT_MSG(is_zero(value) ||
+        (value > 0 && value_ >= min_int64 + value) ||
+        (value < 0 && value_ <= max_int64 + value), "underflow");
+
+    value_ -= value;
+    return *this;
+}
 
 } // namespace machine
 } // namespace system

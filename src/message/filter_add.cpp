@@ -18,14 +18,10 @@
  */
 #include <bitcoin/system/message/filter_add.hpp>
 
-#include <bitcoin/system/math/limits.hpp>
-#include <bitcoin/system/message/messages.hpp>
+#include <bitcoin/system/assert.hpp>
+#include <bitcoin/system/message/message.hpp>
 #include <bitcoin/system/message/version.hpp>
-#include <bitcoin/system/utility/assert.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -97,13 +93,13 @@ void filter_add::reset()
 
 bool filter_add::from_data(uint32_t version, const data_chunk& data)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(version, istream);
 }
 
 bool filter_add::from_data(uint32_t version, std::istream& stream)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(version, source);
 }
 
@@ -111,9 +107,9 @@ bool filter_add::from_data(uint32_t version, reader& source)
 {
     reset();
 
-    const auto size = source.read_size_little_endian();
+    const auto size = source.read_size();
 
-    if (size > max_filter_add)
+    if (size > chain::max_filter_add)
         source.invalidate();
     else
         data_ = source.read_bytes(size);
@@ -132,7 +128,7 @@ data_chunk filter_add::to_data(uint32_t version) const
     data_chunk data;
     const auto size = serialized_size(version);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(version, ostream);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -141,19 +137,19 @@ data_chunk filter_add::to_data(uint32_t version) const
 
 void filter_add::to_data(uint32_t version, std::ostream& stream) const
 {
-    ostream_writer sink(stream);
-    to_data(version, sink);
+    write::bytes::ostream out(stream);
+    to_data(version, out);
 }
 
 void filter_add::to_data(uint32_t, writer& sink) const
 {
-    sink.write_variable_little_endian(data_.size());
+    sink.write_variable(data_.size());
     sink.write_bytes(data_);
 }
 
 size_t filter_add::serialized_size(uint32_t) const
 {
-    return variable_uint_size(data_.size()) + data_.size();
+    return variable_size(data_.size()) + data_.size();
 }
 
 data_chunk& filter_add::data()

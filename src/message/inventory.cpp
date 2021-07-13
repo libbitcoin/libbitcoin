@@ -20,16 +20,12 @@
 
 #include <algorithm>
 #include <initializer_list>
-#include <bitcoin/system/math/hash.hpp>
-#include <bitcoin/system/math/limits.hpp>
+#include <bitcoin/system/crypto/crypto.hpp>
 #include <bitcoin/system/message/inventory.hpp>
 #include <bitcoin/system/message/inventory_vector.hpp>
-#include <bitcoin/system/message/messages.hpp>
+#include <bitcoin/system/message/message.hpp>
 #include <bitcoin/system/message/version.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -118,13 +114,13 @@ void inventory::reset()
 
 bool inventory::from_data(uint32_t version, const data_chunk& data)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(version, istream);
 }
 
 bool inventory::from_data(uint32_t version, std::istream& stream)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(version, source);
 }
 
@@ -132,10 +128,10 @@ bool inventory::from_data(uint32_t version, reader& source)
 {
     reset();
 
-    const auto count = source.read_size_little_endian();
+    const auto count = source.read_size();
 
     // Guard against potential for arbitrary memory allocation.
-    if (count > max_inventory)
+    if (count > chain::max_inventory)
         source.invalidate();
     else
         inventories_.resize(count);
@@ -156,7 +152,7 @@ data_chunk inventory::to_data(uint32_t version) const
     data_chunk data;
     const auto size = serialized_size(version);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(version, ostream);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -165,13 +161,13 @@ data_chunk inventory::to_data(uint32_t version) const
 
 void inventory::to_data(uint32_t version, std::ostream& stream) const
 {
-    ostream_writer sink(stream);
-    to_data(version, sink);
+    write::bytes::ostream out(stream);
+    to_data(version, out);
 }
 
 void inventory::to_data(uint32_t version, writer& sink) const
 {
-    sink.write_variable_little_endian(inventories_.size());
+    sink.write_variable(inventories_.size());
 
     for (const auto& inventory: inventories_)
         inventory.to_data(version, sink);
@@ -201,7 +197,7 @@ void inventory::reduce(inventory_vector::list& out, type_id type) const
 
 size_t inventory::serialized_size(uint32_t version) const
 {
-    return variable_uint_size(inventories_.size()) +
+    return variable_size(inventories_.size()) +
         inventories_.size() * inventory_vector::satoshi_fixed_size(version);
 }
 

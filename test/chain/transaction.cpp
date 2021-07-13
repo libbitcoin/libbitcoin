@@ -16,11 +16,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc;
-using namespace bc::system;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(chain_transaction_tests)
 
@@ -332,10 +328,10 @@ BOOST_AUTO_TEST_CASE(transaction__is_final__locktime_zero__returns_true)
 
 BOOST_AUTO_TEST_CASE(transaction__is_final__locktime_less_block_time_greater_threshold__returns_true)
 {
-    static const size_t height = locktime_threshold + 100;
+    static const size_t height = chain::locktime_threshold + 100;
     static const uint32_t time = 100;
     chain::transaction instance;
-    instance.set_locktime(locktime_threshold + 50);
+    instance.set_locktime(chain::locktime_threshold + 50);
     BOOST_REQUIRE(instance.is_final(height, time));
 }
 
@@ -363,7 +359,7 @@ BOOST_AUTO_TEST_CASE(transaction__is_final__locktime_inputs_final__returns_true)
     static const size_t height = 100;
     static const uint32_t time = 100;
     chain::input input;
-    input.set_sequence(max_input_sequence);
+    input.set_sequence(chain::max_input_sequence);
     chain::transaction instance(0u, 101u, { input }, {});
     BOOST_REQUIRE(instance.is_final(height, time));
 }
@@ -426,7 +422,7 @@ BOOST_AUTO_TEST_CASE(transaction__is_locktime_conflict__input_max_sequence__retu
     chain::input::list inputs;
 
     inputs.emplace_back();
-    inputs.back().set_sequence(max_input_sequence);
+    inputs.back().set_sequence(chain::max_input_sequence);
     chain::transaction instance(0, 2143u, std::move(inputs), {});
     BOOST_REQUIRE(instance.is_locktime_conflict());
 }
@@ -443,7 +439,7 @@ BOOST_AUTO_TEST_CASE(transaction__from_data__insufficient_version_bytes__failure
 
 BOOST_AUTO_TEST_CASE(transaction__from_data__insufficient_input_bytes__failure)
 {
-    data_chunk data = to_chunk(base16_literal("0000000103"));
+    const auto data = base16_chunk("0000000103");
     chain::transaction instance;
     BOOST_REQUIRE(!instance.from_data(data));
     BOOST_REQUIRE(!instance.is_valid());
@@ -451,7 +447,7 @@ BOOST_AUTO_TEST_CASE(transaction__from_data__insufficient_input_bytes__failure)
 
 BOOST_AUTO_TEST_CASE(transaction__from_data__insufficient_output_bytes__failure)
 {
-    data_chunk data = to_chunk(base16_literal("000000010003"));
+    const auto data = base16_chunk("000000010003");
     chain::transaction instance;
     BOOST_REQUIRE(!instance.from_data(data));
     BOOST_REQUIRE(!instance.is_valid());
@@ -463,13 +459,13 @@ BOOST_AUTO_TEST_CASE(transaction__from_data__insufficient_output_bytes__failure)
 ////    static const auto wire = true;
 ////    const auto data_wire = to_chunk(base16_literal(TX3_WIRE_SERIALIZED));
 ////
-////    data_source wire_stream(data_wire);
+////    stream::in::copy wire_stream(data_wire);
 ////    chain::transaction wire_tx;
 ////    BOOST_REQUIRE(wire_tx.from_data(wire_stream, wire));
 ////    BOOST_REQUIRE(data_wire == wire_tx.to_data(wire));
 ////    ////const auto get_store_text = encode_base16(wire_tx.to_data(!wire));
 ////    const auto data_store = to_chunk(base16_literal(TX3_STORE_SERIALIZED_V3));
-////    data_source store_stream(data_store);
+////    stream::in::copy store_stream(data_store);
 ////    chain::transaction store_tx;
 ////    BOOST_REQUIRE(store_tx.from_data(store_stream, !wire));
 ////    BOOST_REQUIRE(data_store == store_tx.to_data(!wire));
@@ -515,7 +511,7 @@ BOOST_AUTO_TEST_CASE(transaction__factory_data_2__case_1__success)
     static const auto raw_tx = to_chunk(base16_literal(TX1));
     BOOST_REQUIRE_EQUAL(raw_tx.size(), 225u);
 
-    data_source stream(raw_tx);
+    stream::in::copy stream(raw_tx);
     chain::transaction tx = chain::transaction::factory(stream);
     BOOST_REQUIRE(tx.is_valid());
     BOOST_REQUIRE_EQUAL(tx.serialized_size(), 225u);
@@ -533,7 +529,7 @@ BOOST_AUTO_TEST_CASE(transaction__factory_data_2__case_2__success)
     static const auto raw_tx = to_chunk(base16_literal(TX4));
     BOOST_REQUIRE_EQUAL(raw_tx.size(), 523u);
 
-    data_source stream(raw_tx);
+    stream::in::copy stream(raw_tx);
     chain::transaction tx = chain::transaction::factory(stream);
     BOOST_REQUIRE(tx.is_valid());
     BOOST_REQUIRE(tx.hash() == tx_hash);
@@ -550,8 +546,7 @@ BOOST_AUTO_TEST_CASE(transaction__factory_data_3__case_1__success)
     static const auto raw_tx = to_chunk(base16_literal(TX1));
     BOOST_REQUIRE_EQUAL(raw_tx.size(), 225u);
 
-    data_source stream(raw_tx);
-    istream_reader source(stream);
+    read::bytes::copy source(raw_tx);
     chain::transaction tx = chain::transaction::factory(source);
     BOOST_REQUIRE(tx.is_valid());
     BOOST_REQUIRE_EQUAL(tx.serialized_size(), 225u);
@@ -569,8 +564,7 @@ BOOST_AUTO_TEST_CASE(transaction__factory_data_3__case_2__success)
     static const data_chunk raw_tx = to_chunk(base16_literal(TX4));
     BOOST_REQUIRE_EQUAL(raw_tx.size(), 523u);
 
-    data_source stream(raw_tx);
-    istream_reader source(stream);
+    read::bytes::copy source(raw_tx);
     chain::transaction tx = chain::transaction::factory(source);
     BOOST_REQUIRE(tx.is_valid());
     BOOST_REQUIRE(tx.hash() == tx_hash);
@@ -669,7 +663,7 @@ BOOST_AUTO_TEST_CASE(transaction__is_oversized_coinbase__script_size_below_min__
     instance.inputs().back().previous_output().set_index(chain::point::null_index);
     instance.inputs().back().previous_output().set_hash(null_hash);
     BOOST_REQUIRE(instance.is_coinbase());
-    BOOST_REQUIRE(instance.inputs().back().script().serialized_size(false) < min_coinbase_size);
+    BOOST_REQUIRE(instance.inputs().back().script().serialized_size(false) < chain::min_coinbase_size);
     BOOST_REQUIRE(instance.is_oversized_coinbase());
 }
 
@@ -680,9 +674,9 @@ BOOST_AUTO_TEST_CASE(transaction__is_oversized_coinbase__script_size_below_min__
 ////    inputs.emplace_back();
 ////    inputs.back().previous_output().set_index(chain::point::null_index);
 ////    inputs.back().previous_output().set_hash(null_hash);
-////    BOOST_REQUIRE(inputs.back().script().from_data(data_chunk(max_coinbase_size + 10), false));
+////    BOOST_REQUIRE(inputs.back().script().from_data(data_chunk(chain::max_coinbase_size + 10), false));
 ////    BOOST_REQUIRE(instance.is_coinbase());
-////    BOOST_REQUIRE(inputs.back().script().serialized_size(false) > max_coinbase_size);
+////    BOOST_REQUIRE(inputs.back().script().serialized_size(false) > chain::max_coinbase_size);
 ////    BOOST_REQUIRE(instance.is_oversized_coinbase());
 ////}
 ////

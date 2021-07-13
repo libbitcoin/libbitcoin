@@ -16,13 +16,11 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
-using namespace bc::system::message;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(filter_clear_tests)
+
+using namespace bc::system::message;
 
 BOOST_AUTO_TEST_CASE(from_data_insufficient_version_failure)
 {
@@ -49,7 +47,7 @@ BOOST_AUTO_TEST_CASE(roundtrip_to_data_factory_stream)
 {
     static const filter_clear expected{};
     const auto data = expected.to_data(version::level::maximum);
-    data_source istream(data);
+    stream::in::copy istream(data);
     const auto result = filter_clear::factory(version::level::maximum, istream);
 
     BOOST_REQUIRE_EQUAL(data.size(), 0u);
@@ -61,8 +59,7 @@ BOOST_AUTO_TEST_CASE(roundtrip_to_data_factory_reader)
 {
     static const filter_clear expected{};
     const auto data = expected.to_data(version::level::maximum);
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = filter_clear::factory(version::level::maximum, source);
 
     BOOST_REQUIRE_EQUAL(data.size(), 0u);

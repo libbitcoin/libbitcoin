@@ -16,10 +16,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(alert_payload_tests)
 
@@ -298,7 +295,7 @@ BOOST_AUTO_TEST_CASE(alert_payload__factory_2__roundtrip__success)
     };
 
     const auto data = expected.to_data(message::version::level::minimum);
-    data_source istream(data);
+    stream::in::copy istream(data);
     const auto result = message::alert_payload::factory(
         message::version::level::minimum, istream);
 
@@ -332,10 +329,8 @@ BOOST_AUTO_TEST_CASE(alert_payload__factory_3__roundtrip__success)
     };
 
     const auto data = expected.to_data(message::version::level::minimum);
-    data_source istream(data);
-    istream_reader source(istream);
-    const auto result = message::alert_payload::factory(
-        message::version::level::minimum, source);
+    read::bytes::copy source(data);
+    const auto result = message::alert_payload::factory(message::version::level::minimum, source);
 
     BOOST_REQUIRE(result.is_valid());
     BOOST_REQUIRE(expected == result);

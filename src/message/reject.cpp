@@ -19,13 +19,10 @@
 #include <bitcoin/system/message/reject.hpp>
 
 #include <bitcoin/system/message/block.hpp>
-#include <bitcoin/system/message/messages.hpp>
+#include <bitcoin/system/message/message.hpp>
 #include <bitcoin/system/message/transaction.hpp>
 #include <bitcoin/system/message/version.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -127,13 +124,13 @@ void reject::reset()
 
 bool reject::from_data(uint32_t version, const data_chunk& data)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(version, istream);
 }
 
 bool reject::from_data(uint32_t version, std::istream& stream)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(version, source);
 }
 
@@ -153,7 +150,7 @@ bool reject::from_data(uint32_t version, reader& source)
         const auto bytes = source.read_bytes();
 
         if (bytes.size() == hash_size)
-            build_array(data_, { bytes });
+            data_ = to_array<hash_size>(bytes);
     }
 
     if (version < reject::version_minimum)
@@ -170,7 +167,7 @@ data_chunk reject::to_data(uint32_t version) const
     data_chunk data;
     const auto size = serialized_size(version);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(version, ostream);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -179,8 +176,8 @@ data_chunk reject::to_data(uint32_t version) const
 
 void reject::to_data(uint32_t version, std::ostream& stream) const
 {
-    ostream_writer sink(stream);
-    to_data(version, sink);
+    write::bytes::ostream out(stream);
+    to_data(version, out);
 }
 
 void reject::to_data(uint32_t, writer& sink) const
@@ -192,14 +189,14 @@ void reject::to_data(uint32_t, writer& sink) const
     if ((message_ == block::command) ||
         (message_ == transaction::command))
     {
-        sink.write_hash(data_);
+        sink.write_bytes(data_);
     }
 }
 
 size_t reject::serialized_size(uint32_t) const
 {
-    size_t size = 1u + variable_uint_size(message_.size()) +
-        message_.size() + variable_uint_size(reason_.size()) + reason_.size();
+    size_t size = 1u + variable_size(message_.size()) +
+        message_.size() + variable_size(reason_.size()) + reason_.size();
 
     if ((message_ == block::command) ||
         (message_ == transaction::command))

@@ -16,13 +16,11 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
-using namespace bc::system::message;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(headers_tests)
+
+using namespace bc::system::message;
 
 BOOST_AUTO_TEST_CASE(headers__constructor_1__always__initialized_invalid)
 {
@@ -218,7 +216,7 @@ BOOST_AUTO_TEST_CASE(headers__factory_2__valid_input__success)
 
     static const auto version = headers::version_minimum;
     const auto data = expected.to_data(version);
-    data_source istream(data);
+    stream::in::copy istream(data);
     auto result = headers::factory(version, istream);
     BOOST_REQUIRE(result.is_valid());
     BOOST_REQUIRE(result == expected);
@@ -242,8 +240,7 @@ BOOST_AUTO_TEST_CASE(headers__factory_3__valid_input__success)
 
     static const auto version = headers::version_minimum;
     const auto data = expected.to_data(version);
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = headers::factory(version, source);
     BOOST_REQUIRE(result.is_valid());
     BOOST_REQUIRE(result == expected);

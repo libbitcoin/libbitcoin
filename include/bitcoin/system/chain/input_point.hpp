@@ -20,12 +20,16 @@
 #define LIBBITCOIN_SYSTEM_CHAIN_INPUT_POINT_HPP
 
 #include <bitcoin/system/chain/point.hpp>
+#include <bitcoin/system/define.hpp>
 
 namespace libbitcoin {
 namespace system {
 namespace chain {
 
-typedef point input_point;
+class BC_API input_point
+  : public point
+{
+};
 
 } // namespace chain
 } // namespace system

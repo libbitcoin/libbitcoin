@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <bitcoin/system.hpp>
 
 struct script_test
 {

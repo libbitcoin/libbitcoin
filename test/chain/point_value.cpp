@@ -16,13 +16,11 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
-using namespace bc::system::chain;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(point_value_tests)
+
+using namespace bc::system::chain;
 
 static const auto hash1 = hash_literal(
     "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f");

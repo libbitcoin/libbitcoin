@@ -16,10 +16,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(filter_load_tests)
 
@@ -152,7 +149,7 @@ BOOST_AUTO_TEST_CASE(filter_load__factory_2__valid_input__success)
     };
 
     const auto data = expected.to_data(message::version::level::maximum);
-    data_source istream(data);
+    stream::in::copy istream(data);
     const auto result = message::filter_load::factory(
         message::version::level::maximum, istream);
 
@@ -175,8 +172,7 @@ BOOST_AUTO_TEST_CASE(filter_load__factory_3__valid_input__success)
     };
 
     const auto data = expected.to_data(message::version::level::maximum);
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = message::filter_load::factory(
         message::version::level::maximum, source);
 

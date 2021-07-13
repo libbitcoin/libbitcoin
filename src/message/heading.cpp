@@ -19,12 +19,9 @@
 #include <bitcoin/system/message/heading.hpp>
 
 #include <bitcoin/system/constants.hpp>
-#include <bitcoin/system/message/messages.hpp>
+#include <bitcoin/system/message/message.hpp>
 #include <bitcoin/system/message/version.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -51,14 +48,14 @@ size_t heading::maximum_size()
 size_t heading::maximum_payload_size(uint32_t, bool witness)
 {
     static constexpr size_t vector = sizeof(uint32_t) + hash_size;
-    static constexpr size_t maximum = 3u + vector * max_inventory;
+    static constexpr size_t maximum = 3u + vector * chain::max_inventory;
     static_assert(maximum <= max_size_t, "maximum_payload_size overflow");
-    return witness ? max_block_weight : maximum;
+    return witness ? chain::max_block_weight : maximum;
 }
 
 size_t heading::satoshi_fixed_size()
 {
-    return sizeof(uint32_t) + command_size + sizeof(uint32_t) +
+    return sizeof(uint32_t) + chain::command_size + sizeof(uint32_t) +
         sizeof(uint32_t);
 }
 
@@ -89,15 +86,18 @@ heading::heading()
 }
 
 heading::heading(uint32_t magic, const std::string& command,
-    uint32_t payload_size, uint32_t checksum)
-  : magic_(magic), command_(command), payload_size_(payload_size),
-    checksum_(checksum)
+    const data_chunk& payload)
+  : heading(magic, command, static_cast<uint32_t>(payload.size()),
+      network_checksum(payload))
 {
+    if (payload.size() > max_uint32)
+        reset();
 }
 
-heading::heading(uint32_t magic, std::string&& command, uint32_t payload_size,
-    uint32_t checksum)
-  : magic_(magic), command_(std::move(command)), payload_size_(payload_size),
+// protected
+heading::heading(uint32_t magic, const std::string& command,
+    uint32_t payload_size, uint32_t checksum)
+  : magic_(magic), command_(command), payload_size_(payload_size),
     checksum_(checksum)
 {
 }
@@ -132,13 +132,13 @@ void heading::reset()
 
 bool heading::from_data(const data_chunk& data)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(istream);
 }
 
 bool heading::from_data(std::istream& stream)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(source);
 }
 
@@ -146,7 +146,7 @@ bool heading::from_data(reader& source)
 {
     reset();
     magic_ = source.read_4_bytes_little_endian();
-    command_ = source.read_string(command_size);
+    command_ = source.read_string(chain::command_size);
     payload_size_ = source.read_4_bytes_little_endian();
     checksum_ = source.read_4_bytes_little_endian();
 
@@ -161,7 +161,7 @@ data_chunk heading::to_data() const
     data_chunk data;
     const auto size = satoshi_fixed_size();
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(ostream);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -170,14 +170,14 @@ data_chunk heading::to_data() const
 
 void heading::to_data(std::ostream& stream) const
 {
-    ostream_writer sink(stream);
-    to_data(sink);
+    write::bytes::ostream out(stream);
+    to_data(out);
 }
 
 void heading::to_data(writer& sink) const
 {
     sink.write_4_bytes_little_endian(magic_);
-    sink.write_string(command_, command_size);
+    sink.write_string(command_, chain::command_size);
     sink.write_4_bytes_little_endian(payload_size_);
     sink.write_4_bytes_little_endian(checksum_);
 }
@@ -265,11 +265,6 @@ void heading::set_magic(uint32_t value)
     magic_ = value;
 }
 
-std::string& heading::command()
-{
-    return command_;
-}
-
 const std::string& heading::command() const
 {
     return command_;
@@ -290,19 +285,9 @@ uint32_t heading::payload_size() const
     return payload_size_;
 }
 
-void heading::set_payload_size(uint32_t value)
+bool heading::verify_checksum(const data_slice& body) const
 {
-    payload_size_ = value;
-}
-
-uint32_t heading::checksum() const
-{
-    return checksum_;
-}
-
-void heading::set_checksum(uint32_t value)
-{
-    checksum_ = value;
+    return network_checksum(body) == checksum_;
 }
 
 heading& heading::operator=(heading&& other)

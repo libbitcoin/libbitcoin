@@ -16,12 +16,10 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-
+#include "../test.hpp"
 #include <string>
-#include <bitcoin/system.hpp>
 
-using namespace bc::system;
+BOOST_AUTO_TEST_SUITE(reject_tests)
 
 // /Satoshi:0.12.1/
 // Invalid reject payload from [46.101.110.115:8333] bad data stream
@@ -41,8 +39,6 @@ static const hash_digest data
         0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F
     }
 };
-
-BOOST_AUTO_TEST_SUITE(reject_tests)
 
 BOOST_AUTO_TEST_CASE(reject__factory__tx_nonstandard_empty_data__valid)
 {
@@ -300,7 +296,7 @@ BOOST_AUTO_TEST_CASE(reject__factory_2__valid_input__success)
     );
 
     const auto data = expected.to_data(version_maximum);
-    data_source istream(data);
+    stream::in::copy istream(data);
     const auto result = message::reject::factory(version_maximum, istream);
     BOOST_REQUIRE(result.is_valid());
     BOOST_REQUIRE(expected == result);
@@ -318,8 +314,7 @@ BOOST_AUTO_TEST_CASE(reject__factory_3__valid_input__success)
     );
 
     const auto data = expected.to_data(version_maximum);
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = message::reject::factory(version_maximum, source);
     BOOST_REQUIRE(result.is_valid());
     BOOST_REQUIRE(expected == result);

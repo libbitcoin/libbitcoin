@@ -16,269 +16,164 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc;
-using namespace bc::system;
-using namespace bc::system::message;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(heading_tests)
 
-BOOST_AUTO_TEST_CASE(heading__constructor_1__always__initialized_invalid)
+using namespace bc::system::message;
+
+BOOST_AUTO_TEST_CASE(heading__constructor_default__always__invalid)
 {
-    heading instance;
+    const heading instance;
     BOOST_REQUIRE_EQUAL(false, instance.is_valid());
 }
 
-BOOST_AUTO_TEST_CASE(heading__constructor_2__always__equals_params)
+BOOST_AUTO_TEST_CASE(heading__constructor__always__expected_params)
 {
-    uint32_t magic = 123u;
-    const std::string command = "foo";
-    uint32_t payload_size = 3454u;
-    uint32_t checksum = 35746u;
-    heading instance(magic, command, payload_size, checksum);
+    const uint32_t magic = 42;
+    const auto command = "foo";
+    const auto payload = to_chunk("bar");
+    const heading instance(magic, command, payload);
     BOOST_REQUIRE(instance.is_valid());
     BOOST_REQUIRE_EQUAL(magic, instance.magic());
     BOOST_REQUIRE_EQUAL(command, instance.command());
-    BOOST_REQUIRE_EQUAL(payload_size, instance.payload_size());
-    BOOST_REQUIRE_EQUAL(checksum, instance.checksum());
+    BOOST_REQUIRE_EQUAL(payload.size(), instance.payload_size());
 }
 
-BOOST_AUTO_TEST_CASE(heading__constructor_3__always__equals_params)
+BOOST_AUTO_TEST_CASE(heading__copy_constructor__always__valid_equal)
 {
-    uint32_t magic = 123u;
-    const std::string command = "foo";
-    uint32_t payload_size = 3454u;
-    uint32_t checksum = 35746u;
-    heading instance(magic, "foo", payload_size, checksum);
+    const heading expected(42, "foo", to_chunk("bar"));
+    const heading instance(expected);
     BOOST_REQUIRE(instance.is_valid());
-    BOOST_REQUIRE_EQUAL(magic, instance.magic());
-    BOOST_REQUIRE_EQUAL(command, instance.command());
-    BOOST_REQUIRE_EQUAL(payload_size, instance.payload_size());
-    BOOST_REQUIRE_EQUAL(checksum, instance.checksum());
 }
 
-BOOST_AUTO_TEST_CASE(heading__constructor_4__always__equals_params)
+BOOST_AUTO_TEST_CASE(heading__move_constructor__always__valid_equal)
 {
-    heading expected(453u, "bar", 436u, 5743u);
-    heading instance(expected);
+    const heading expected(42, "foo", to_chunk("bar"));
+    const heading instance(std::move(expected));
     BOOST_REQUIRE(instance.is_valid());
-    BOOST_REQUIRE(expected == instance);
+    BOOST_REQUIRE(instance == expected);
 }
 
-BOOST_AUTO_TEST_CASE(heading__constructor_5__always__equals_params)
+BOOST_AUTO_TEST_CASE(heading__to_data__verify_checksum__expected)
 {
-    uint32_t magic = 123u;
-    const std::string command = "foo";
-    uint32_t payload_size = 3454u;
-    uint32_t checksum = 35746u;
-    heading value(magic, command, payload_size, checksum);
-    heading instance(std::move(value));
-    BOOST_REQUIRE(instance.is_valid());
-    BOOST_REQUIRE_EQUAL(magic, instance.magic());
-    BOOST_REQUIRE_EQUAL(command, instance.command());
-    BOOST_REQUIRE_EQUAL(payload_size, instance.payload_size());
-    BOOST_REQUIRE_EQUAL(checksum, instance.checksum());
+    const auto payload = to_chunk("some data");
+    const heading instance(42, "foo", payload);
+    BOOST_REQUIRE(instance.verify_checksum(payload));
 }
 
-BOOST_AUTO_TEST_CASE(heading__to_data__checksum_variations__success)
+BOOST_AUTO_TEST_CASE(heading__from_data__insufficient_bytes__invalid)
 {
-    heading instance
-    {
-        32414u,
-        "foo",
-        56731u,
-        0u
-    };
-
-    const auto zero_checksum = instance.to_data();
-    BOOST_REQUIRE_EQUAL(zero_checksum.size(), heading::satoshi_fixed_size());
-
-    instance.set_checksum(123u);
-    const auto nonzero_checksum = instance.to_data();
-    BOOST_REQUIRE_EQUAL(nonzero_checksum.size(), heading::satoshi_fixed_size());
-}
-
-BOOST_AUTO_TEST_CASE(heading__from_data__insufficient_bytes__failure)
-{
-    static const data_chunk raw
-    {
-        0xab, 0xcd
-    };
-
     heading instance;
-    BOOST_REQUIRE(!instance.from_data(raw));
+    BOOST_REQUIRE(!instance.from_data(data_chunk({ 42, 42 })));
 }
 
-BOOST_AUTO_TEST_CASE(heading__factory_1__valid_input__success)
+BOOST_AUTO_TEST_CASE(heading__factory_1__sufficient_bytes__expected)
 {
-    static const heading expected
-    {
-        32414u,
-        "foo",
-        56731u,
-        0u
-    };
-
+    const heading expected{ 42, "foo", to_chunk("barbarbarbarbarbarbar") };
     const auto data = expected.to_data();
+    BOOST_REQUIRE_EQUAL(data.size(), heading::satoshi_fixed_size());
+
     const auto result = heading::factory(data);
     BOOST_REQUIRE(result.is_valid());
-    BOOST_REQUIRE(expected == result);
-    BOOST_REQUIRE_EQUAL(data.size(), heading::satoshi_fixed_size());
+    BOOST_REQUIRE(result == expected);
 }
 
-BOOST_AUTO_TEST_CASE(heading__factory_2__valid_input__success)
+BOOST_AUTO_TEST_CASE(heading__factory_2__sufficient_bytes__expected)
 {
-    static const heading expected
-    {
-        29145u,
-        "bar",
-        79531u,
-        0u
-    };
-
+    const heading expected(42, "foo", to_chunk("barbarbarbarbarbarbar"));
     const auto data = expected.to_data();
-    data_source istream(data);
+    BOOST_REQUIRE_EQUAL(data.size(), heading::satoshi_fixed_size());
+
+    stream::in::copy istream(data);
     const auto result = heading::factory(istream);
     BOOST_REQUIRE(result.is_valid());
-    BOOST_REQUIRE(expected == result);
-    BOOST_REQUIRE_EQUAL(data.size(), heading::satoshi_fixed_size());
 }
 
-BOOST_AUTO_TEST_CASE(heading__factory_3__valid_input__success)
+BOOST_AUTO_TEST_CASE(heading__factory_3__sufficient_bytes__expected)
 {
-    static const heading expected
-    {
-        1u,
-        "bazbazbazbaz",
-        2u,
-        0u
-    };
-
+    const heading expected(42, "foo", to_chunk("barbarbarbarbarbarbar"));
     const auto data = expected.to_data();
-    data_source istream(data);
-    istream_reader source(istream);
-    const auto result = heading::factory(source);
     BOOST_REQUIRE_EQUAL(data.size(), heading::satoshi_fixed_size());
+
+    read::bytes::copy source(data);
+    const auto result = heading::factory(source);
     BOOST_REQUIRE(result.is_valid());
-    BOOST_REQUIRE(expected == result);
+    BOOST_REQUIRE(result == expected);
 }
 
-BOOST_AUTO_TEST_CASE(heading__magic_accessor__always__returns_initialized_value)
+BOOST_AUTO_TEST_CASE(heading__magic_accessor__constructor__expected)
 {
-    uint32_t expected = 3574u;
-    message::heading instance(expected, "baz", 4356u, 7923u);
+    uint32_t expected = 42;
+    const heading instance(expected, "foo", to_chunk("bar"));
     BOOST_REQUIRE_EQUAL(expected, instance.magic());
 }
 
-BOOST_AUTO_TEST_CASE(heading__magic_setter__roundtrip__success)
+BOOST_AUTO_TEST_CASE(heading__magic_setter__accessor__round_trips)
 {
-    const uint32_t expected = 3574u;
-    message::heading instance;
-    BOOST_REQUIRE_EQUAL(0, instance.magic());
+    const uint32_t expected = 42;
+    heading instance;
+    BOOST_REQUIRE_EQUAL(instance.magic(), 0u);
     instance.set_magic(expected);
-    BOOST_REQUIRE_EQUAL(expected, instance.magic());
+    BOOST_REQUIRE_EQUAL(instance.magic(), expected);
 }
 
-BOOST_AUTO_TEST_CASE(heading__command_accessor_1__always__returns_initialized_value)
+BOOST_AUTO_TEST_CASE(heading__command_accessor__constructor__expected)
 {
-    const std::string expected = "asdge";
-    message::heading instance(545u, expected, 4356u, 7923u);
-    BOOST_REQUIRE_EQUAL(expected, instance.command());
+    const auto expected = "foo";
+    const heading instance(42, expected, to_chunk("bar"));
+    BOOST_REQUIRE_EQUAL(instance.command(), expected);
 }
 
-BOOST_AUTO_TEST_CASE(heading__command_accessor_2__always__returns_initialized_value)
+BOOST_AUTO_TEST_CASE(heading__command_setter__accessor__round_trips)
 {
-    const std::string expected = "asdge";
-    const message::heading instance(545u, expected, 4356u, 7923u);
-    BOOST_REQUIRE_EQUAL(expected, instance.command());
-}
-
-BOOST_AUTO_TEST_CASE(heading__command_setter_1__roundtrip__success)
-{
-    const std::string expected = "gdasd";
-    message::heading instance;
-    BOOST_REQUIRE(expected != instance.command());
+    const auto expected = "foo";
+    heading instance;
     instance.set_command(expected);
-    BOOST_REQUIRE(expected == instance.command());
+    BOOST_REQUIRE_EQUAL(instance.command(), expected);
 }
 
-BOOST_AUTO_TEST_CASE(heading__command_setter_2__roundtrip__success)
+BOOST_AUTO_TEST_CASE(heading__payload_size_accessor__always__expected)
 {
-    std::string expected = "eytyry";
-    message::heading instance;
-    BOOST_REQUIRE_EQUAL(false, expected == instance.command());
-    instance.set_command("eytyry");
-    BOOST_REQUIRE_EQUAL(expected, instance.command());
+    const auto payload = to_chunk("bar");
+    const heading instance(42, "foo", payload);
+    BOOST_REQUIRE_EQUAL(instance.payload_size(), payload.size());
 }
 
-BOOST_AUTO_TEST_CASE(heading__payload_size_accessor__always__returns_initialized_value)
+BOOST_AUTO_TEST_CASE(heading__assignment__always__valid)
 {
-    const uint32_t expected = 4356u;
-    message::heading instance(3574u, "baz", expected, 7923u);
-    BOOST_REQUIRE_EQUAL(expected, instance.payload_size());
-}
-
-BOOST_AUTO_TEST_CASE(heading__payload_size_setter__roundtrip__success)
-{
-    const uint32_t expected = 3574u;
-    message::heading instance;
-    BOOST_REQUIRE_EQUAL(0, instance.payload_size());
-    instance.set_payload_size(expected);
-    BOOST_REQUIRE_EQUAL(expected, instance.payload_size());
-}
-
-BOOST_AUTO_TEST_CASE(heading__checksum_accessor__always__returns_initialized_value)
-{
-    uint32_t expected = 7923u;
-    message::heading instance(3574u, "baz", 4356u, expected);
-    BOOST_REQUIRE_EQUAL(expected, instance.checksum());
-}
-
-BOOST_AUTO_TEST_CASE(heading__checksum_setter__roundtrip__success)
-{
-    const uint32_t expected = 3574u;
-    message::heading instance;
-    BOOST_REQUIRE_EQUAL(0, instance.checksum());
-    instance.set_checksum(expected);
-    BOOST_REQUIRE_EQUAL(expected, instance.checksum());
-}
-
-BOOST_AUTO_TEST_CASE(heading__operator_assign_equals__always__matches_equivalent)
-{
-    message::heading value(1u, "foobar", 2u, 3u);
+    heading value(42, "foo", to_chunk("bar"));
     BOOST_REQUIRE(value.is_valid());
-    message::heading instance;
-    BOOST_REQUIRE_EQUAL(false, instance.is_valid());
+    heading instance;
+    BOOST_REQUIRE(!instance.is_valid());
     instance = std::move(value);
     BOOST_REQUIRE(instance.is_valid());
 }
 
-BOOST_AUTO_TEST_CASE(heading__operator_boolean_equals__duplicates__returns_true)
+BOOST_AUTO_TEST_CASE(heading__equality__duplicates__true)
 {
-    const message::heading expected(1u, "foobar", 2u, 3u);
-    message::heading instance(expected);
+    heading expected(42, "foo", to_chunk("bar"));
+    heading instance(expected);
     BOOST_REQUIRE(instance == expected);
 }
 
-BOOST_AUTO_TEST_CASE(heading__operator_boolean_equals__differs__returns_false)
+BOOST_AUTO_TEST_CASE(heading__equality__different__false)
 {
-    const message::heading expected(1u, "foobar", 2u, 3u);
+    heading expected(42, "foo", to_chunk("bar"));
     message::heading instance;
-    BOOST_REQUIRE_EQUAL(false, instance == expected);
+    BOOST_REQUIRE(!(instance == expected));
 }
 
-BOOST_AUTO_TEST_CASE(heading__operator_boolean_not_equals__duplicates__returns_false)
+BOOST_AUTO_TEST_CASE(heading__inequality__duplicates__false)
 {
-    const message::heading expected(1u, "foobar", 2u, 3u);
-    message::heading instance(expected);
-    BOOST_REQUIRE_EQUAL(false, instance != expected);
+    heading expected(42, "foo", to_chunk("bar"));
+    heading instance(expected);
+    BOOST_REQUIRE(!(instance != expected));
 }
 
-BOOST_AUTO_TEST_CASE(heading__operator_boolean_not_equals__differs__returns_true)
+BOOST_AUTO_TEST_CASE(heading__inequality__different__true)
 {
-    const message::heading expected(1u, "foobar", 2u, 3u);
+    heading expected(42, "foo", to_chunk("bar"));
     message::heading instance;
     BOOST_REQUIRE(instance != expected);
 }
@@ -348,13 +243,13 @@ BOOST_AUTO_TEST_CASE(heading__maximum_size__always__matches_satoshi_fixed_size)
 
 BOOST_AUTO_TEST_CASE(heading__maximum_payload_size__non_witness__matches_expected)
 {
-    static const size_t expected = 3u + (sizeof(uint32_t) + hash_size) * 50000u;
+    const size_t expected = 3u + (sizeof(uint32_t) + hash_size) * 50000u;
     BOOST_REQUIRE_EQUAL(expected, heading::maximum_payload_size(0u, false));
 }
 
 BOOST_AUTO_TEST_CASE(heading__maximum_payload_size__witness__matches_expected)
 {
-    BOOST_REQUIRE_EQUAL(max_block_weight, heading::maximum_payload_size(0u, true));
+    BOOST_REQUIRE_EQUAL(chain::max_block_weight, heading::maximum_payload_size(0u, true));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

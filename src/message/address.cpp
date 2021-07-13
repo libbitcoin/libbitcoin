@@ -18,13 +18,9 @@
  */
 #include <bitcoin/system/message/address.hpp>
 
-#include <bitcoin/system/math/limits.hpp>
-#include <bitcoin/system/message/messages.hpp>
+#include <bitcoin/system/message/message.hpp>
 #include <bitcoin/system/message/version.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -93,13 +89,13 @@ void address::reset()
 
 bool address::from_data(uint32_t version, const data_chunk& data)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(version, istream);
 }
 
 bool address::from_data(uint32_t version, std::istream& stream)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(version, source);
 }
 
@@ -107,10 +103,10 @@ bool address::from_data(uint32_t version, reader& source)
 {
     reset();
 
-    const auto count = source.read_size_little_endian();
+    const auto count = source.read_size();
 
     // Guard against potential for arbitrary memory allocation.
-    if (count > max_address)
+    if (count > chain::max_address)
         source.invalidate();
     else
         addresses_.resize(count);
@@ -130,7 +126,7 @@ data_chunk address::to_data(uint32_t version) const
     data_chunk data;
     const auto size = serialized_size(version);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(version, ostream);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -139,13 +135,13 @@ data_chunk address::to_data(uint32_t version) const
 
 void address::to_data(uint32_t version, std::ostream& stream) const
 {
-    ostream_writer sink(stream);
-    to_data(version, sink);
+    write::bytes::ostream out(stream);
+    to_data(version, out);
 }
 
 void address::to_data(uint32_t version, writer& sink) const
 {
-    sink.write_variable_little_endian(addresses_.size());
+    sink.write_variable(addresses_.size());
 
     for (const auto& net_address: addresses_)
         net_address.to_data(version, sink, true);
@@ -153,7 +149,7 @@ void address::to_data(uint32_t version, writer& sink) const
 
 size_t address::serialized_size(uint32_t version) const
 {
-    return variable_uint_size(addresses_.size()) +
+    return variable_size(addresses_.size()) +
         (addresses_.size() * network_address::satoshi_fixed_size(version, true));
 }
 

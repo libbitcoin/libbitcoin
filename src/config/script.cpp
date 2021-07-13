@@ -21,18 +21,13 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <boost/algorithm/string.hpp>
-#include <boost/program_options.hpp>
 #include <bitcoin/system/chain/script.hpp>
-#include <bitcoin/system/utility/data.hpp>
-#include <bitcoin/system/utility/string.hpp>
+#include <bitcoin/system/data/data.hpp>
+#include <bitcoin/system/exceptions.hpp>
 
 namespace libbitcoin {
 namespace system {
 namespace config {
-
-using namespace boost;
-using namespace boost::program_options;
 
 script::script()
   : value_()
@@ -84,20 +79,18 @@ std::istream& operator>>(std::istream& input, script& argument)
 {
     std::istreambuf_iterator<char> end;
     std::string mnemonic(std::istreambuf_iterator<char>(input), end);
-    boost::trim(mnemonic);
+    trim(mnemonic);
 
     // Test for invalid result sentinel.
     if (!argument.value_.from_string(mnemonic) && mnemonic.length() > 0)
-    {
-        BOOST_THROW_EXCEPTION(invalid_option_value(mnemonic));
-    }
+        throw istream_exception(mnemonic);
 
     return input;
 }
 
 std::ostream& operator<<(std::ostream& output, const script& argument)
 {
-    static constexpr auto flags = machine::rule_fork::all_rules;
+    static constexpr auto flags = chain::rule_fork::all_rules;
     output << argument.value_.to_string(flags);
     return output;
 }

@@ -20,9 +20,9 @@
 
 #include <sstream>
 #include <string>
-#include <boost/program_options.hpp>
 #include <bitcoin/system/chain/transaction.hpp>
 #include <bitcoin/system/config/base16.hpp>
+#include <bitcoin/system/exceptions.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -66,9 +66,7 @@ std::istream& operator>>(std::istream& input, transaction& argument)
     input >> hexcode;
 
     if (!argument.value_.from_data(base16(hexcode)))
-    {
-        BOOST_THROW_EXCEPTION(invalid_option_value(hexcode));
-    }
+        throw istream_exception(hexcode);
 
     return input;
 }

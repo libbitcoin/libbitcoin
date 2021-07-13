@@ -22,14 +22,11 @@
 #include <cstdint>
 #include <istream>
 #include <utility>
-#include <bitcoin/system/constants.hpp>
 #include <bitcoin/system/chain/point.hpp>
 #include <bitcoin/system/chain/transaction.hpp>
-#include <bitcoin/system/utility/data.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/constants.hpp>
+#include <bitcoin/system/data/data.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -156,13 +153,13 @@ payment_record payment_record::factory(reader& source, bool wire)
 
 bool payment_record::from_data(const data_chunk& data, bool wire)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(istream, wire);
 }
 
 bool payment_record::from_data(std::istream& stream, bool wire)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(source, wire);
 }
 
@@ -224,7 +221,7 @@ data_chunk payment_record::to_data(bool wire) const
     data_chunk data;
     const auto size = serialized_size(wire);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(ostream, wire);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -233,8 +230,8 @@ data_chunk payment_record::to_data(bool wire) const
 
 void payment_record::to_data(std::ostream& stream, bool wire) const
 {
-    ostream_writer sink(stream);
-    to_data(sink, wire);
+    write::bytes::ostream out(stream);
+    to_data(out, wire);
 }
 
 // Wire assumes height and point.hash population.
@@ -249,7 +246,7 @@ void payment_record::to_data(writer& sink, bool wire) const
         const auto height = static_cast<uint32_t>(height_);
         sink.write_4_bytes_little_endian(height);
 
-        sink.write_hash(hash_);
+        sink.write_bytes(hash_);
         sink.write_4_bytes_little_endian(index_);
     }
     else

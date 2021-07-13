@@ -16,10 +16,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(ping_tests)
 
@@ -113,7 +110,7 @@ BOOST_AUTO_TEST_CASE(ping__factory_2__minimum_version_round_trip__zero_nonce)
 
     static const auto version = message::version::level::minimum;
     const auto data = value.to_data(version);
-    data_source istream(data);
+    stream::in::copy istream(data);
     const auto result = message::ping::factory(version, istream);
     BOOST_REQUIRE(result.is_valid());
     BOOST_REQUIRE_EQUAL(result.nonce(), 0u);
@@ -128,8 +125,7 @@ BOOST_AUTO_TEST_CASE(ping__factory_3__minimum_version_round_trip__zero_nonce)
 
     static const auto version = message::version::level::minimum;
     const auto data = value.to_data(version);
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = message::ping::factory(version, source);
     BOOST_REQUIRE(result.is_valid());
     BOOST_REQUIRE_EQUAL(result.nonce(), 0u);
@@ -176,7 +172,7 @@ BOOST_AUTO_TEST_CASE(ping__factory_2__bip31_version_round_trip__expected_nonce)
 
     static const auto version = message::version::level::bip31;
     const auto data = expected.to_data(version);
-    data_source istream(data);
+    stream::in::copy istream(data);
     const auto result = message::ping::factory(version, istream);
     BOOST_REQUIRE(result.is_valid());
     BOOST_REQUIRE(result == expected);
@@ -191,8 +187,7 @@ BOOST_AUTO_TEST_CASE(ping__factory_3__bip31_version_round_trip__expected_nonce)
 
     static const auto version = message::version::level::bip31;
     const auto data = expected.to_data(version);
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = message::ping::factory(version, source);
     BOOST_REQUIRE(result.is_valid());
     BOOST_REQUIRE(result == expected);

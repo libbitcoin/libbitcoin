@@ -16,14 +16,11 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
-
-data_chunk valid_raw_output = to_chunk(base16_literal("20300500000000001976a914905f933de850988603aafeeb2fd7fce61e66fe5d88ac"));
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(output_tests)
+
+const auto valid_raw_output = base16_chunk("20300500000000001976a914905f933de850988603aafeeb2fd7fce61e66fe5d88ac");
 
 BOOST_AUTO_TEST_CASE(output__constructor_1__always__returns_default_initialized)
 {
@@ -35,7 +32,7 @@ BOOST_AUTO_TEST_CASE(output__constructor_2__valid_input__returns_input_initializ
 {
     uint64_t value = 643u;
     chain::script script;
-    const auto data = to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1"));
+    const auto data = base16_chunk("ece424a6bb6ddf4db592c0faed60685047a361b1");
     BOOST_REQUIRE(script.from_data(data, false));
 
     chain::output instance(value, script);
@@ -48,7 +45,7 @@ BOOST_AUTO_TEST_CASE(output__constructor_3__valid_input__returns_input_initializ
 {
     uint64_t value = 643u;
     chain::script script;
-    const auto data = to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1"));
+    const auto data = base16_chunk("ece424a6bb6ddf4db592c0faed60685047a361b1");
     BOOST_REQUIRE(script.from_data(data, false));
 
     // This must be non-const.
@@ -105,7 +102,7 @@ BOOST_AUTO_TEST_CASE(output__factory_1__valid_input_success)
 
 BOOST_AUTO_TEST_CASE(output__factory_2__valid_input_success)
 {
-    data_source stream(valid_raw_output);
+    stream::in::copy stream(valid_raw_output);
     auto instance = chain::output::factory(stream);
     BOOST_REQUIRE(instance.is_valid());
     BOOST_REQUIRE_EQUAL(instance.serialized_size(), valid_raw_output.size());
@@ -118,8 +115,7 @@ BOOST_AUTO_TEST_CASE(output__factory_2__valid_input_success)
 
 BOOST_AUTO_TEST_CASE(output__factory_3__valid_input_success)
 {
-    data_source stream(valid_raw_output);
-    istream_reader source(stream);
+    read::bytes::copy source(valid_raw_output);
     auto instance = chain::output::factory(source);
     BOOST_REQUIRE(instance.is_valid());
     BOOST_REQUIRE_EQUAL(instance.serialized_size(), valid_raw_output.size());
@@ -148,7 +144,7 @@ BOOST_AUTO_TEST_CASE(output__value__roundtrip__success)
 BOOST_AUTO_TEST_CASE(output__script_setter_1__roundtrip__success)
 {
     chain::script value;
-    const auto data = to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1"));
+    const auto data = base16_chunk("ece424a6bb6ddf4db592c0faed60685047a361b1");
      BOOST_REQUIRE(value.from_data(data, false));
 
     chain::output instance;
@@ -163,7 +159,7 @@ BOOST_AUTO_TEST_CASE(output__script_setter_1__roundtrip__success)
 BOOST_AUTO_TEST_CASE(output__script_setter_2__roundtrip__success)
 {
     chain::script value;
-    const auto data = to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1"));
+    const auto data = base16_chunk("ece424a6bb6ddf4db592c0faed60685047a361b1");
     BOOST_REQUIRE(value.from_data(data, false));
 
     // This must be non-const.

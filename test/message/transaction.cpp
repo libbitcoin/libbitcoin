@@ -16,18 +16,16 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
-using namespace bc::system::message;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(message_transaction_tests)
+
+using namespace bc::system::message;
 
 BOOST_AUTO_TEST_CASE(transaction__constructor_1__always__initialized_invalid)
 {
     transaction instance;
-    BOOST_REQUIRE_EQUAL(false, instance.is_valid());
+    BOOST_REQUIRE(!instance.is_valid());
 }
 
 BOOST_AUTO_TEST_CASE(transaction__constructor_2__always__equals_transaction)
@@ -158,12 +156,9 @@ BOOST_AUTO_TEST_CASE(transaction__from_data__valid_junk__success)
         "000000000000005739943a9c29a1955dfae2b3f37de547005bfb9535192e5fb0"
         "000000000000005739943a9c29a1955dfae2b3f37de547005bfb9535192e5fb0");
 
-    // data_chunk_stream_host host(junk);
-    byte_source<std::array<uint8_t, 64>> source(junk);
-    boost::iostreams::stream<byte_source<std::array<uint8_t, 64>>> stream(source);
-
     transaction tx;
-    BOOST_REQUIRE(tx.from_data(version::level::minimum, stream));
+    read::bytes::copy reader(junk);
+    BOOST_REQUIRE(tx.from_data(version::level::minimum, reader));
 }
 
 BOOST_AUTO_TEST_CASE(transaction__factory_1__case_1_valid_data__success)
@@ -241,7 +236,7 @@ BOOST_AUTO_TEST_CASE(transaction__factory_2__case_1_valid_data__success)
         "00"));
     BOOST_REQUIRE_EQUAL(raw_tx.size(), 225u);
 
-    data_source stream(raw_tx);
+    stream::in::copy stream(raw_tx);
     const auto tx = transaction::factory(version::level::minimum, stream);
     BOOST_REQUIRE(tx.is_valid());
     BOOST_REQUIRE_EQUAL(tx.serialized_size(version::level::minimum), 225u);
@@ -250,7 +245,7 @@ BOOST_AUTO_TEST_CASE(transaction__factory_2__case_1_valid_data__success)
     // Re-save tx and compare against original.
     BOOST_REQUIRE_EQUAL(tx.serialized_size(version::level::minimum), raw_tx.size());
     data_chunk resave;
-    data_sink ostream(resave);
+    stream::out::data ostream(resave);
     tx.to_data(version::level::minimum, ostream);
     ostream.flush();
     BOOST_REQUIRE(resave == raw_tx);
@@ -280,7 +275,7 @@ BOOST_AUTO_TEST_CASE(transaction__factory_2__case_2_valid_data__success)
         "e61e66fe5d88ac00000000"));
     BOOST_REQUIRE_EQUAL(raw_tx.size(), 523u);
 
-    data_source stream(raw_tx);
+    stream::in::copy stream(raw_tx);
     const auto tx = transaction::factory(version::level::minimum, stream);
     BOOST_REQUIRE(tx.is_valid());
     BOOST_REQUIRE(tx.hash() == tx_hash);
@@ -288,7 +283,7 @@ BOOST_AUTO_TEST_CASE(transaction__factory_2__case_2_valid_data__success)
     // Re-save tx and compare against original.
     BOOST_REQUIRE(tx.serialized_size(version::level::minimum) == raw_tx.size());
     data_chunk resave;
-    data_sink ostream(resave);
+    stream::out::data ostream(resave);
     tx.to_data(version::level::minimum, ostream);
     ostream.flush();
     BOOST_REQUIRE(resave == raw_tx);
@@ -309,8 +304,7 @@ BOOST_AUTO_TEST_CASE(transaction__factory_3__case_1_valid_data__success)
         "00"));
     BOOST_REQUIRE_EQUAL(raw_tx.size(), 225u);
 
-    data_source stream(raw_tx);
-    istream_reader source(stream);
+    read::bytes::copy source(raw_tx);
     const auto tx = transaction::factory(version::level::minimum, source);
     BOOST_REQUIRE(tx.is_valid());
     BOOST_REQUIRE_EQUAL(tx.serialized_size(version::level::minimum), 225u);
@@ -319,10 +313,9 @@ BOOST_AUTO_TEST_CASE(transaction__factory_3__case_1_valid_data__success)
     // Re-save tx and compare against original.
     BOOST_REQUIRE_EQUAL(tx.serialized_size(version::level::minimum), raw_tx.size());
     data_chunk resave;
-    data_sink ostream(resave);
-    ostream_writer sink(ostream);
-    tx.to_data(version::level::minimum, sink);
-    ostream.flush();
+    write::bytes::data out(resave);
+    tx.to_data(version::level::minimum, out);
+    out.flush();
     BOOST_REQUIRE(resave == raw_tx);
 }
 
@@ -350,19 +343,17 @@ BOOST_AUTO_TEST_CASE(transaction__factory_3__case_2_valid_data__success)
         "e61e66fe5d88ac00000000"));
     BOOST_REQUIRE_EQUAL(raw_tx.size(), 523u);
 
-    data_source stream(raw_tx);
-    istream_reader source(stream);
-    const auto tx = transaction::factory(version::level::minimum, source);
+    read::bytes::copy in(raw_tx);
+    const auto tx = transaction::factory(version::level::minimum, in);
     BOOST_REQUIRE(tx.is_valid());
     BOOST_REQUIRE(tx.hash() == tx_hash);
 
     // Re-save tx and compare against original.
     BOOST_REQUIRE(tx.serialized_size(version::level::minimum) == raw_tx.size());
     data_chunk resave;
-    data_sink ostream(resave);
-    ostream_writer sink(ostream);
-    tx.to_data(version::level::minimum, sink);
-    ostream.flush();
+    write::bytes::data out(resave);
+    tx.to_data(version::level::minimum, out);
+    out.flush();
     BOOST_REQUIRE(resave == raw_tx);
 }
 

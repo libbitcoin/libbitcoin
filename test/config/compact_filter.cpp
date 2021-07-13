@@ -19,15 +19,14 @@
 
 // Sponsored in part by Digital Contract Design, LLC
 
+#include "../test.hpp"
 #include <sstream>
 #include <string>
 #include <boost/lexical_cast.hpp>
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system::config;
 
 BOOST_AUTO_TEST_SUITE(compact_filter_tests)
+
+using namespace bc::system::config;
 
 static const std::string encoded_genesis_filter =
     "00"

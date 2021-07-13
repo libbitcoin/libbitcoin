@@ -23,7 +23,7 @@
 
 #include <utility>
 #include <bitcoin/system/constants.hpp>
-#include <bitcoin/system/math/hash.hpp>
+#include <bitcoin/system/crypto/crypto.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -33,7 +33,7 @@ namespace chain {
 const uint64_t block_filter::validation::unlinked = max_int64;
 
 block_filter::block_filter()
-  : filter_type_(0u),
+  : filter_type_(0),
     block_hash_(null_hash),
     header_(null_hash),
     filter_(),
@@ -173,7 +173,7 @@ bool block_filter::is_valid() const
 
 void block_filter::reset()
 {
-    filter_type_ = 0u;
+    filter_type_ = 0;
     block_hash_.fill(0);
     header_.fill(0);
     filter_.clear();

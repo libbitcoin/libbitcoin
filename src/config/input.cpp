@@ -20,11 +20,12 @@
 
 #include <sstream>
 #include <string>
-#include <boost/program_options.hpp>
 #include <bitcoin/system/chain/input.hpp>
 #include <bitcoin/system/chain/input_point.hpp>
 #include <bitcoin/system/config/point.hpp>
-#include <bitcoin/system/utility/string.hpp>
+#include <bitcoin/system/data/data.hpp>
+#include <bitcoin/system/exceptions.hpp>
+#include <bitcoin/system/serial/deserialize.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -32,20 +33,21 @@ namespace config {
 
 using namespace boost::program_options;
 
-// input is currently a private encoding in bx.
+// input is a private encoding in bx.
 static bool decode_input(chain::input& input, const std::string& tuple)
 {
     const auto tokens = split(tuple, point::delimiter);
     if (tokens.size() != 2 && tokens.size() != 3)
         return false;
 
-    input.set_sequence(max_input_sequence);
+    input.set_sequence(chain::max_input_sequence);
     input.set_previous_output(point(tokens[0] + ":" + tokens[1]));
 
+    // TODO: remove stealth inputs.
     if (tokens.size() == 3)
     {
         uint32_t value;
-        if (!deserialize(value, tokens[2], true))
+        if (!deserialize(value, tokens[2]))
             return false;
 
         input.set_sequence(value);
@@ -85,7 +87,7 @@ input::input(const input& other)
 }
 
 input::input(const chain::input_point& value)
-  : value_({value, {}, max_input_sequence})
+  : value_({value, {}, chain::max_input_sequence})
 {
 }
 
@@ -100,9 +102,7 @@ std::istream& operator>>(std::istream& stream, input& argument)
     stream >> tuple;
 
     if (!decode_input(argument.value_, tuple))
-    {
-        BOOST_THROW_EXCEPTION(invalid_option_value(tuple));
-    }
+        throw istream_exception(tuple);
 
     return stream;
 }

@@ -20,12 +20,10 @@
 #define LIBBITCOIN_SYSTEM_MACHINE_INTERPRETER_HPP
 
 #include <cstdint>
-#include <bitcoin/system/define.hpp>
+#include <bitcoin/system/data/data.hpp>
 #include <bitcoin/system/error.hpp>
-#include <bitcoin/system/machine/opcode.hpp>
-#include <bitcoin/system/machine/operation.hpp>
+#include <bitcoin/system/chain/chain.hpp>
 #include <bitcoin/system/machine/program.hpp>
-#include <bitcoin/system/utility/data.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -39,11 +37,11 @@ public:
     // Operations (shared).
     //-------------------------------------------------------------------------
 
-    static result op_nop(opcode);
-    static result op_disabled(opcode);
-    static result op_reserved(opcode);
+    static result op_nop(chain::opcode);
+    static result op_disabled(chain::opcode);
+    static result op_reserved(chain::opcode);
     static result op_push_number(program& program, uint8_t value);
-    static result op_push_size(program& program, const operation& op);
+    static result op_push_size(program& program, const chain::operation& op);
     static result op_push_data(program& program, const data_chunk& data,
         uint32_t size_limit);
 
@@ -103,7 +101,7 @@ public:
     static result op_sha256(program& program);
     static result op_hash160(program& program);
     static result op_hash256(program& program);
-    static result op_codeseparator(program& program, const operation& op);
+    static result op_codeseparator(program& program, const chain::operation& op);
     static result op_check_sig_verify(program& program);
     static result op_check_sig(program& program);
     static result op_check_multisig_verify(program& program);
@@ -116,16 +114,14 @@ public:
 
     /// Run individual operations (idependent of the script).
     /// For best performance use script runner for a sequence of operations.
-    static code run(const operation& op, program& program);
+    static code run(const chain::operation& op, program& program);
 
 private:
-    static result run_op(const operation& op, program& program);
+    static result run_op(const chain::operation& op, program& program);
 };
 
 } // namespace machine
 } // namespace system
 } // namespace libbitcoin
-
-#include <bitcoin/system/impl/machine/interpreter.ipp>
 
 #endif

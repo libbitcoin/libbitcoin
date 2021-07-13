@@ -16,10 +16,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(pong_tests)
 
@@ -85,7 +82,7 @@ BOOST_AUTO_TEST_CASE(pong__factory_2__round_trip__expected)
 
     static const auto version = message::version::level::minimum;
     const auto data = expected.to_data(version);
-    data_source istream(data);
+    stream::in::copy istream(data);
     const auto result = message::pong::factory(version, istream);
 
     BOOST_REQUIRE(result.is_valid());
@@ -103,8 +100,7 @@ BOOST_AUTO_TEST_CASE(pong__factory_3__round_trip__expected)
 
     static const auto version = message::version::level::minimum;
     const auto data = expected.to_data(version);
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = message::pong::factory(version, source);
 
     BOOST_REQUIRE(result.is_valid());

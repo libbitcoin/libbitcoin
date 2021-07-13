@@ -21,8 +21,8 @@
 
 #include <iostream>
 #include <string>
+#include <bitcoin/system/data/data.hpp>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/utility/data.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -63,12 +63,6 @@ public:
      * @return  This object's value cast to internal type reference.
      */
     operator const data_chunk&() const;
-
-    /**
-     * Overload cast to generic data reference.
-     * @return  This object's value cast to a generic data.
-     */
-    operator data_slice() const;
 
     /**
      * Overload stream in. Throws if input is invalid.

@@ -19,13 +19,9 @@
 #include <bitcoin/system/message/get_block_transactions.hpp>
 
 #include <initializer_list>
-#include <bitcoin/system/math/limits.hpp>
-#include <bitcoin/system/message/messages.hpp>
+#include <bitcoin/system/message/message.hpp>
 #include <bitcoin/system/message/version.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -103,14 +99,14 @@ void get_block_transactions::reset()
 bool get_block_transactions::from_data(uint32_t version,
     const data_chunk& data)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(version, istream);
 }
 
 bool get_block_transactions::from_data(uint32_t version,
     std::istream& stream)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(version, source);
 }
 
@@ -120,16 +116,16 @@ bool get_block_transactions::from_data(uint32_t ,
     reset();
 
     block_hash_ = source.read_hash();
-    const auto count = source.read_size_little_endian();
+    const auto count = source.read_size();
 
     // Guard against potential for arbitrary memory allocation.
-    if (count > max_block_size)
+    if (count > chain::max_block_size)
         source.invalidate();
     else
         indexes_.reserve(count);
 
     for (size_t position = 0; position < count && source; ++position)
-        indexes_.push_back(source.read_size_little_endian());
+        indexes_.push_back(source.read_size());
 
     if (!source)
         reset();
@@ -142,7 +138,7 @@ data_chunk get_block_transactions::to_data(uint32_t version) const
     data_chunk data;
     const auto size = serialized_size(version);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(version, ostream);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -152,25 +148,25 @@ data_chunk get_block_transactions::to_data(uint32_t version) const
 void get_block_transactions::to_data(uint32_t version,
     std::ostream& stream) const
 {
-    ostream_writer sink(stream);
-    to_data(version, sink);
+    write::bytes::ostream out(stream);
+    to_data(version, out);
 }
 
 void get_block_transactions::to_data(uint32_t ,
     writer& sink) const
 {
-    sink.write_hash(block_hash_);
-    sink.write_variable_little_endian(indexes_.size());
+    sink.write_bytes(block_hash_);
+    sink.write_variable(indexes_.size());
     for (const auto& element: indexes_)
-        sink.write_variable_little_endian(element);
+        sink.write_variable(element);
 }
 
 size_t get_block_transactions::serialized_size(uint32_t) const
 {
-    auto size = hash_size + variable_uint_size(indexes_.size());
+    auto size = hash_size + variable_size(indexes_.size());
 
     for (const auto& element: indexes_)
-        size += variable_uint_size(element);
+        size += variable_size(element);
 
     return size;
 }

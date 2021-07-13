@@ -23,13 +23,9 @@
 #include <istream>
 #include <utility>
 #include <bitcoin/system/constants.hpp>
-#include <bitcoin/system/math/hash.hpp>
-#include <bitcoin/system/utility/binary.hpp>
-#include <bitcoin/system/utility/data.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/crypto/crypto.hpp>
+#include <bitcoin/system/data/data.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -182,13 +178,13 @@ stealth_record stealth_record::factory(reader& source, bool wire)
 
 bool stealth_record::from_data(const data_chunk& data, bool wire)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(istream, wire);
 }
 
 bool stealth_record::from_data(std::istream& stream, bool wire)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(source, wire);
 }
 
@@ -218,16 +214,17 @@ bool stealth_record::from_data(reader& source, size_t start_height,
     if (height_ < start_height)
     {
         reset();
-        source.skip(serialized_size(false) - sizeof(uint32_t));
+        source.skip_bytes(serialized_size(false) - sizeof(uint32_t));
         return false;
     }
 
-    prefix_ = source.read_4_bytes_little_endian();
+    const auto prefix = source.read_bytes(sizeof(uint32_t));
+    prefix_ = from_little_endian<uint32_t>(prefix);
 
-    if (!filter.is_prefix_of(prefix_))
+    if (filter != binary(filter.bits(), prefix))
     {
         reset();
-        source.skip(serialized_size(false) - 2 * sizeof(uint32_t));
+        source.skip_bytes(serialized_size(false) - 2 * sizeof(uint32_t));
         return false;
     }
 
@@ -266,7 +263,7 @@ data_chunk stealth_record::to_data(bool wire) const
     data_chunk data;
     const auto size = serialized_size(wire);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(ostream, wire);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -275,8 +272,8 @@ data_chunk stealth_record::to_data(bool wire) const
 
 void stealth_record::to_data(std::ostream& stream, bool wire) const
 {
-    ostream_writer sink(stream);
-    to_data(sink, wire);
+    write::bytes::ostream out(stream);
+    to_data(out, wire);
 }
 
 void stealth_record::to_data(writer& sink, bool wire) const
@@ -288,9 +285,9 @@ void stealth_record::to_data(writer& sink, bool wire) const
         sink.write_4_bytes_little_endian(prefix_);
     }
 
-    sink.write_hash(unsigned_ephemeral_);
-    sink.write_short_hash(public_key_hash_);
-    sink.write_hash(transaction_hash_);
+    sink.write_bytes(unsigned_ephemeral_);
+    sink.write_bytes(public_key_hash_);
+    sink.write_bytes(transaction_hash_);
 }
 
 // Properties (size, accessors).

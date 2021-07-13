@@ -23,8 +23,8 @@
 #include <iostream>
 #include <string>
 #include <cstdint>
+#include <bitcoin/system/data/data.hpp>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/utility/data.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -59,7 +59,7 @@ public:
      * @param[in]  value  The value to initialize with.
      */
     template<size_t Size>
-    base16(const byte_array<Size>& value)
+    base16(const data_array<Size>& value)
       : value_(value.begin(), value.end())
     {
     }
@@ -75,12 +75,6 @@ public:
      * @return  This object's value cast to internal type reference.
      */
     operator const data_chunk&() const;
-
-    /**
-     * Overload cast to generic data reference.
-     * @return  This object's value cast to a generic data.
-     */
-    operator data_slice() const;
 
     /**
      * Overload stream in. If input is invalid sets no bytes in argument.

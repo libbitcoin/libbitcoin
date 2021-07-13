@@ -16,14 +16,11 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-
+#include "../test.hpp"
 #include <cstdint>
-#include <bitcoin/system.hpp>
 
 BOOST_AUTO_TEST_SUITE(compact_tests)
 
-using namespace bc::system;
 using namespace bc::system::chain;
 
 #define PRIMES "020305070b0d1113171d1f25292b2f353b3d4347494f53596165676b6d717f83"
@@ -46,13 +43,13 @@ static uint32_t factory(int32_t logical_exponent, bool negative, uint32_t mantis
 
 BOOST_AUTO_TEST_CASE(compact__constructor1__proof_of_work_limit__normalizes_unchanged)
 {
-    const auto pow_limit = settings(config::settings::mainnet).proof_of_work_limit;
+    const auto pow_limit = settings(chain::selection::mainnet).proof_of_work_limit;
     BOOST_REQUIRE_EQUAL(compact(pow_limit).normal(), pow_limit);
 }
 
 BOOST_AUTO_TEST_CASE(compact__constructor1__no_retarget_proof_of_work_limit__normalizes_unchanged)
 {
-    const auto no_pow_limit = settings(config::settings::regtest).proof_of_work_limit;
+    const auto no_pow_limit = settings(chain::selection::regtest).proof_of_work_limit;
     BOOST_REQUIRE_EQUAL(compact(no_pow_limit).normal(), no_pow_limit);
 }
 

@@ -20,11 +20,10 @@
 
 #include <istream>
 #include <utility>
-#include <bitcoin/system/chain/input.hpp>
-#include <bitcoin/system/chain/output.hpp>
+#include <bitcoin/system/chain/chain.hpp>
+#include <bitcoin/system/data/data.hpp>
 #include <bitcoin/system/message/version.hpp>
-#include <bitcoin/system/utility/data.hpp>
-#include <bitcoin/system/utility/reader.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {

@@ -21,7 +21,7 @@
 
 #include <iostream>
 #include <string>
-#include <bitcoin/system/chain/transaction.hpp>
+#include <bitcoin/system/chain/chain.hpp>
 #include <bitcoin/system/define.hpp>
 
 namespace libbitcoin {

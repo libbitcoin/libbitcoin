@@ -16,13 +16,12 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-
+#include "../test.hpp"
 #include <sstream>
-#include <bitcoin/system.hpp>
 #include "script.hpp"
 
-using namespace bc::system;
+BOOST_AUTO_TEST_SUITE(script_tests)
+
 using namespace bc::system::chain;
 using namespace bc::system::machine;
 
@@ -131,21 +130,18 @@ std::string test_name(const script_test& test)
     return out.str();
 }
 
-BOOST_AUTO_TEST_SUITE(script_tests)
+BOOST_AUTO_TEST_CASE(script__one__literal__expected)
+{
+    static const ec_secret big_endian_one{ { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
+    BOOST_REQUIRE_EQUAL(script::one, big_endian_one);
+}
 
 // Serialization tests.
 //------------------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE(script__one_hash__literal__same)
-{
-    static const auto hash_one = hash_literal("0000000000000000000000000000000000000000000000000000000000000001");
-    static const hash_digest one_hash{ { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
-    BOOST_REQUIRE(one_hash == hash_one);
-}
-
 BOOST_AUTO_TEST_CASE(script__from_data__testnet_119058_invalid_op_codes__success)
 {
-    const auto raw_script = to_chunk(base16_literal("0130323066643366303435313438356531306633383837363437356630643265396130393739343332353534313766653139316438623963623230653430643863333030326431373463336539306366323433393231383761313037623634373337633937333135633932393264653431373731636565613062323563633534353732653302ae"));
+    const auto raw_script = base16_chunk("0130323066643366303435313438356531306633383837363437356630643265396130393739343332353534313766653139316438623963623230653430643863333030326431373463336539306366323433393231383761313037623634373337633937333135633932393264653431373731636565613062323563633534353732653302ae");
 
     script parsed;
     BOOST_REQUIRE(parsed.from_data(raw_script, false));
@@ -153,7 +149,7 @@ BOOST_AUTO_TEST_CASE(script__from_data__testnet_119058_invalid_op_codes__success
 
 BOOST_AUTO_TEST_CASE(script__from_data__parse__success)
 {
-    const auto raw_script = to_chunk(base16_literal("3045022100ff1fc58dbd608e5e05846a8e6b45a46ad49878aef6879ad1a7cf4c5a7f853683022074a6a10f6053ab3cddc5620d169c7374cd42c1416c51b9744db2c8d9febfb84d01"));
+    const auto raw_script = base16_chunk("3045022100ff1fc58dbd608e5e05846a8e6b45a46ad49878aef6879ad1a7cf4c5a7f853683022074a6a10f6053ab3cddc5620d169c7374cd42c1416c51b9744db2c8d9febfb84d01");
 
     script parsed;
     BOOST_REQUIRE(parsed.from_data(raw_script, true));
@@ -161,13 +157,13 @@ BOOST_AUTO_TEST_CASE(script__from_data__parse__success)
 
 BOOST_AUTO_TEST_CASE(script__from_data__to_data__roundtrips)
 {
-    const auto normal_output_script = to_chunk(base16_literal("76a91406ccef231c2db72526df9338894ccf9355e8f12188ac"));
+    const auto normal_output_script = base16_chunk("76a91406ccef231c2db72526df9338894ccf9355e8f12188ac");
 
     script out_script;
     BOOST_REQUIRE(out_script.from_data(normal_output_script, false));
 
     const auto roundtrip = out_script.to_data(false);
-    BOOST_REQUIRE(roundtrip == normal_output_script);
+    BOOST_REQUIRE_EQUAL(roundtrip, normal_output_script);
 }
 
 BOOST_AUTO_TEST_CASE(script__from_data__to_data_weird__roundtrips)
@@ -195,29 +191,28 @@ BOOST_AUTO_TEST_CASE(script__from_data__to_data_weird__roundtrips)
     BOOST_REQUIRE(weird.from_data(weird_raw_script, false));
 
     const auto roundtrip_result = weird.to_data(false);
-    BOOST_REQUIRE(roundtrip_result == weird_raw_script);
+    BOOST_REQUIRE_EQUAL(roundtrip_result, weird_raw_script);
 }
 
 BOOST_AUTO_TEST_CASE(script__factory_chunk_test)
 {
-    const auto raw = to_chunk(base16_literal("76a914fc7b44566256621affb1541cc9d59f08336d276b88ac"));
+    const auto raw = base16_chunk("76a914fc7b44566256621affb1541cc9d59f08336d276b88ac");
     const auto instance = script::factory(raw, false);
     BOOST_REQUIRE(instance.is_valid());
 }
 
 BOOST_AUTO_TEST_CASE(script__factory_stream_test)
 {
-    auto raw = to_chunk(base16_literal("76a914fc7b44566256621affb1541cc9d59f08336d276b88ac"));
-    data_source istream(raw);
+    const auto raw = base16_chunk("76a914fc7b44566256621affb1541cc9d59f08336d276b88ac");
+    stream::in::copy istream(raw);
     auto instance = script::factory(istream, false);
     BOOST_REQUIRE(instance.is_valid());
 }
 
 BOOST_AUTO_TEST_CASE(script__factory_reader_test)
 {
-    auto raw = to_chunk(base16_literal("76a914fc7b44566256621affb1541cc9d59f08336d276b88ac"));
-    data_source istream(raw);
-    istream_reader source(istream);
+    const auto raw = base16_chunk("76a914fc7b44566256621affb1541cc9d59f08336d276b88ac");
+    read::bytes::copy source(raw);
     const auto instance = script::factory(source, false);
     BOOST_REQUIRE(instance.is_valid());
 }
@@ -258,9 +253,9 @@ BOOST_AUTO_TEST_CASE(script__from_string__two_of_three_multisig__success)
     const auto& ops = instance.operations();
     BOOST_REQUIRE_EQUAL(ops.size(), 6u);
     BOOST_REQUIRE(ops[0] == opcode::push_positive_2);
-    BOOST_REQUIRE(ops[1].to_string(rule_fork::no_rules) == "[03dcfd9e580de35d8c2060d76dbf9e5561fe20febd2e64380e860a4d59f15ac864]");
-    BOOST_REQUIRE(ops[2].to_string(rule_fork::no_rules) == "[02440e0304bf8d32b2012994393c6a477acf238dd6adb4c3cef5bfa72f30c9861c]");
-    BOOST_REQUIRE(ops[3].to_string(rule_fork::no_rules) == "[03624505c6cc3967352cce480d8550490dd68519cd019066a4c302fdfb7d1c9934]");
+    BOOST_REQUIRE_EQUAL(ops[1].to_string(rule_fork::no_rules), "[03dcfd9e580de35d8c2060d76dbf9e5561fe20febd2e64380e860a4d59f15ac864]");
+    BOOST_REQUIRE_EQUAL(ops[2].to_string(rule_fork::no_rules), "[02440e0304bf8d32b2012994393c6a477acf238dd6adb4c3cef5bfa72f30c9861c]");
+    BOOST_REQUIRE_EQUAL(ops[3].to_string(rule_fork::no_rules), "[03624505c6cc3967352cce480d8550490dd68519cd019066a4c302fdfb7d1c9934]");
     BOOST_REQUIRE(ops[4] == opcode::push_positive_3);
     BOOST_REQUIRE(ops[5] == opcode::checkmultisig);
 }
@@ -302,9 +297,9 @@ BOOST_AUTO_TEST_CASE(script__pattern__pay_null_data_return_only__non_standard)
     script instance;
     instance.from_string(SCRIPT_RETURN);
     BOOST_REQUIRE(instance.is_valid());
-    BOOST_REQUIRE(instance.output_pattern() == machine::script_pattern::non_standard);
-    BOOST_REQUIRE(instance.input_pattern() == machine::script_pattern::non_standard);
-    BOOST_REQUIRE(instance.pattern() == machine::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.output_pattern() == chain::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.input_pattern() == chain::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.pattern() == chain::script_pattern::non_standard);
 }
 
 BOOST_AUTO_TEST_CASE(script__pattern__pay_null_data_empty__null_data)
@@ -312,9 +307,9 @@ BOOST_AUTO_TEST_CASE(script__pattern__pay_null_data_empty__null_data)
     script instance;
     instance.from_string(SCRIPT_RETURN_EMPTY);
     BOOST_REQUIRE(instance.is_valid());
-    BOOST_REQUIRE(instance.output_pattern() == machine::script_pattern::pay_null_data);
-    BOOST_REQUIRE(instance.input_pattern() == machine::script_pattern::non_standard);
-    BOOST_REQUIRE(instance.pattern() == machine::script_pattern::pay_null_data);
+    BOOST_REQUIRE(instance.output_pattern() == chain::script_pattern::pay_null_data);
+    BOOST_REQUIRE(instance.input_pattern() == chain::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.pattern() == chain::script_pattern::pay_null_data);
 }
 
 BOOST_AUTO_TEST_CASE(script__pattern__pay_null_data_80_bytes__null_data)
@@ -322,9 +317,9 @@ BOOST_AUTO_TEST_CASE(script__pattern__pay_null_data_80_bytes__null_data)
     script instance;
     instance.from_string(SCRIPT_RETURN_80);
     BOOST_REQUIRE(instance.is_valid());
-    BOOST_REQUIRE(instance.output_pattern() == machine::script_pattern::pay_null_data);
-    BOOST_REQUIRE(instance.input_pattern() == machine::script_pattern::non_standard);
-    BOOST_REQUIRE(instance.pattern() == machine::script_pattern::pay_null_data);
+    BOOST_REQUIRE(instance.output_pattern() == chain::script_pattern::pay_null_data);
+    BOOST_REQUIRE(instance.input_pattern() == chain::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.pattern() == chain::script_pattern::pay_null_data);
 }
 
 BOOST_AUTO_TEST_CASE(script__pattern__pay_null_data_81_bytes__non_standard)
@@ -332,9 +327,9 @@ BOOST_AUTO_TEST_CASE(script__pattern__pay_null_data_81_bytes__non_standard)
     script instance;
     instance.from_string(SCRIPT_RETURN_81);
     BOOST_REQUIRE(instance.is_valid());
-    BOOST_REQUIRE(instance.output_pattern() == machine::script_pattern::non_standard);
-    BOOST_REQUIRE(instance.input_pattern() == machine::script_pattern::non_standard);
-    BOOST_REQUIRE(instance.pattern() == machine::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.output_pattern() == chain::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.input_pattern() == chain::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.pattern() == chain::script_pattern::non_standard);
 }
 
 // pay_multisig
@@ -344,9 +339,9 @@ BOOST_AUTO_TEST_CASE(script__pattern__0_of_3_multisig__non_standard)
     script instance;
     instance.from_string(SCRIPT_0_OF_3_MULTISIG);
     BOOST_REQUIRE(instance.is_valid());
-    BOOST_REQUIRE(instance.output_pattern() == machine::script_pattern::non_standard);
-    BOOST_REQUIRE(instance.input_pattern() == machine::script_pattern::non_standard);
-    BOOST_REQUIRE(instance.pattern() == machine::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.output_pattern() == chain::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.input_pattern() == chain::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.pattern() == chain::script_pattern::non_standard);
 }
 
 BOOST_AUTO_TEST_CASE(script__pattern__1_of_3_multisig__pay_multisig)
@@ -354,9 +349,9 @@ BOOST_AUTO_TEST_CASE(script__pattern__1_of_3_multisig__pay_multisig)
     script instance;
     instance.from_string(SCRIPT_1_OF_3_MULTISIG);
     BOOST_REQUIRE(instance.is_valid());
-    BOOST_REQUIRE(instance.output_pattern() == machine::script_pattern::pay_multisig);
-    BOOST_REQUIRE(instance.input_pattern() == machine::script_pattern::non_standard);
-    BOOST_REQUIRE(instance.pattern() == machine::script_pattern::pay_multisig);
+    BOOST_REQUIRE(instance.output_pattern() == chain::script_pattern::pay_multisig);
+    BOOST_REQUIRE(instance.input_pattern() == chain::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.pattern() == chain::script_pattern::pay_multisig);
 }
 
 BOOST_AUTO_TEST_CASE(script__pattern__2_of_3_multisig__pay_multisig)
@@ -364,9 +359,9 @@ BOOST_AUTO_TEST_CASE(script__pattern__2_of_3_multisig__pay_multisig)
     script instance;
     instance.from_string(SCRIPT_2_OF_3_MULTISIG);
     BOOST_REQUIRE(instance.is_valid());
-    BOOST_REQUIRE(instance.output_pattern() == machine::script_pattern::pay_multisig);
-    BOOST_REQUIRE(instance.input_pattern() == machine::script_pattern::non_standard);
-    BOOST_REQUIRE(instance.pattern() == machine::script_pattern::pay_multisig);
+    BOOST_REQUIRE(instance.output_pattern() == chain::script_pattern::pay_multisig);
+    BOOST_REQUIRE(instance.input_pattern() == chain::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.pattern() == chain::script_pattern::pay_multisig);
 }
 
 BOOST_AUTO_TEST_CASE(script__pattern__3_of_3_multisig__pay_multisig)
@@ -374,9 +369,9 @@ BOOST_AUTO_TEST_CASE(script__pattern__3_of_3_multisig__pay_multisig)
     script instance;
     instance.from_string(SCRIPT_3_OF_3_MULTISIG);
     BOOST_REQUIRE(instance.is_valid());
-    BOOST_REQUIRE(instance.output_pattern() == machine::script_pattern::pay_multisig);
-    BOOST_REQUIRE(instance.input_pattern() == machine::script_pattern::non_standard);
-    BOOST_REQUIRE(instance.pattern() == machine::script_pattern::pay_multisig);
+    BOOST_REQUIRE(instance.output_pattern() == chain::script_pattern::pay_multisig);
+    BOOST_REQUIRE(instance.input_pattern() == chain::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.pattern() == chain::script_pattern::pay_multisig);
 }
 
 BOOST_AUTO_TEST_CASE(script__pattern__4_of_3_multisig__non_standard)
@@ -384,9 +379,9 @@ BOOST_AUTO_TEST_CASE(script__pattern__4_of_3_multisig__non_standard)
     script instance;
     instance.from_string(SCRIPT_4_OF_3_MULTISIG);
     BOOST_REQUIRE(instance.is_valid());
-    BOOST_REQUIRE(instance.output_pattern() == machine::script_pattern::non_standard);
-    BOOST_REQUIRE(instance.input_pattern() == machine::script_pattern::non_standard);
-    BOOST_REQUIRE(instance.pattern() == machine::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.output_pattern() == chain::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.input_pattern() == chain::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.pattern() == chain::script_pattern::non_standard);
 }
 
 BOOST_AUTO_TEST_CASE(script__pattern__16_of_16_multisig__pay_multisig)
@@ -394,9 +389,9 @@ BOOST_AUTO_TEST_CASE(script__pattern__16_of_16_multisig__pay_multisig)
     script instance;
     instance.from_string(SCRIPT_16_OF_16_MULTISIG);
     BOOST_REQUIRE(instance.is_valid());
-    BOOST_REQUIRE(instance.output_pattern() == machine::script_pattern::pay_multisig);
-    BOOST_REQUIRE(instance.input_pattern() == machine::script_pattern::non_standard);
-    BOOST_REQUIRE(instance.pattern() == machine::script_pattern::pay_multisig);
+    BOOST_REQUIRE(instance.output_pattern() == chain::script_pattern::pay_multisig);
+    BOOST_REQUIRE(instance.input_pattern() == chain::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.pattern() == chain::script_pattern::pay_multisig);
 }
 
 BOOST_AUTO_TEST_CASE(script__pattern__17_of_17_multisig__non_standard)
@@ -404,9 +399,9 @@ BOOST_AUTO_TEST_CASE(script__pattern__17_of_17_multisig__non_standard)
     script instance;
     instance.from_string(SCRIPT_17_OF_17_MULTISIG);
     BOOST_REQUIRE(instance.is_valid());
-    BOOST_REQUIRE(instance.output_pattern() == machine::script_pattern::non_standard);
-    BOOST_REQUIRE(instance.input_pattern() == machine::script_pattern::non_standard);
-    BOOST_REQUIRE(instance.pattern() == machine::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.output_pattern() == chain::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.input_pattern() == chain::script_pattern::non_standard);
+    BOOST_REQUIRE(instance.pattern() == chain::script_pattern::non_standard);
 }
 
 // Data-driven tests.
@@ -576,7 +571,7 @@ BOOST_AUTO_TEST_CASE(script__checksig__single__uses_one_hash)
     static const auto index = 1u;
     static const auto strict = true;
     BOOST_REQUIRE(parse_signature(signature, distinguished, strict));
-    BOOST_REQUIRE(script::check_signature(signature, sighash_algorithm::single, pubkey, script_code, parent_tx, index));
+    BOOST_REQUIRE(script::check_signature(signature, sighash_algorithm::hash_single, pubkey, script_code, parent_tx, index));
 }
 
 BOOST_AUTO_TEST_CASE(script__checksig__normal__success)
@@ -602,7 +597,7 @@ BOOST_AUTO_TEST_CASE(script__checksig__normal__success)
     ec_signature signature;
     static const auto index = 0u;
     BOOST_REQUIRE(parse_signature(signature, distinguished, true));
-    BOOST_REQUIRE(script::check_signature(signature, sighash_algorithm::single, pubkey, script_code, parent_tx, index));
+    BOOST_REQUIRE(script::check_signature(signature, sighash_algorithm::hash_single, pubkey, script_code, parent_tx, index));
 }
 
 BOOST_AUTO_TEST_CASE(script__create_endorsement__single_input_single_output__expected)
@@ -619,7 +614,7 @@ BOOST_AUTO_TEST_CASE(script__create_endorsement__single_input_single_output__exp
 
     endorsement out;
     const auto index = 0u;
-    const auto sighash_type = sighash_algorithm::all;
+    const auto sighash_type = sighash_algorithm::hash_all;
     BOOST_REQUIRE(script::create_endorsement(out, secret, prevout_script, new_tx, index, sighash_type));
 
     const auto result = encode_base16(out);
@@ -641,7 +636,7 @@ BOOST_AUTO_TEST_CASE(script__create_endorsement__single_input_no_output__expecte
 
     endorsement out;
     const auto index = 0u;
-    const auto sighash_type = sighash_algorithm::all;
+    const auto sighash_type = sighash_algorithm::hash_all;
     BOOST_REQUIRE(script::create_endorsement(out, secret, prevout_script, new_tx, index, sighash_type));
 
     const auto result = encode_base16(out);
@@ -661,7 +656,7 @@ BOOST_AUTO_TEST_CASE(script__generate_signature_hash__all__expected)
 
     endorsement out;
     const auto index = 0u;
-    const auto sighash_type = sighash_algorithm::all;
+    const auto sighash_type = sighash_algorithm::hash_all;
     const auto sighash = script::generate_signature_hash(new_tx, index, prevout_script, sighash_type);
     const auto result = encode_base16(sighash);
     const auto expected = "f89572635651b2e4f89778350616989183c98d1a721c911324bf9f17a0cf5bf0";

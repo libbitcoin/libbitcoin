@@ -16,10 +16,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(send_headers_tests)
 
@@ -39,7 +36,7 @@ BOOST_AUTO_TEST_CASE(roundtrip_to_data_factory_stream)
 {
     const message::send_headers expected{};
     const auto data = expected.to_data(message::version::level::maximum);
-    data_source istream(data);
+    stream::in::copy istream(data);
     const auto result = message::send_headers::factory(
         message::version::level::maximum, istream);
 
@@ -52,8 +49,7 @@ BOOST_AUTO_TEST_CASE(roundtrip_to_data_factory_reader)
 {
     const message::send_headers expected{};
     const auto data = expected.to_data(message::version::level::maximum);
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = message::send_headers::factory(
         message::version::level::maximum, source);
 
@@ -65,8 +61,7 @@ BOOST_AUTO_TEST_CASE(roundtrip_to_data_factory_reader)
 BOOST_AUTO_TEST_CASE(from_data_reader_version_prior_bip130_failure)
 {
     data_chunk data{};
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     message::send_headers instance{};
     const auto result = instance.from_data(message::version::level::bip130 - 1, source);
 
@@ -77,8 +72,7 @@ BOOST_AUTO_TEST_CASE(from_data_reader_version_prior_bip130_failure)
 BOOST_AUTO_TEST_CASE(from_data_reader_version_at_least_bip130_success)
 {
     data_chunk data{};
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     message::send_headers instance{};
     const auto result = instance.from_data(message::version::level::bip130, source);
 

@@ -20,9 +20,9 @@
 
 #include <sstream>
 #include <string>
-#include <boost/program_options.hpp>
-#include <bitcoin/system/formats/base_64.hpp>
-#include <bitcoin/system/utility/data.hpp>
+#include <bitcoin/system/data/data.hpp>
+#include <bitcoin/system/exceptions.hpp>
+#include <bitcoin/system/radix/base_64.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -52,21 +52,13 @@ base64::operator const data_chunk&() const
     return value_;
 }
 
-base64::operator data_slice() const
-{
-    return value_;
-}
-
 std::istream& operator>>(std::istream& input, base64& argument)
 {
     std::string base64;
     input >> base64;
 
     if (!decode_base64(argument.value_, base64))
-    {
-        using namespace boost::program_options;
-        BOOST_THROW_EXCEPTION(invalid_option_value(base64));
-    }
+        throw istream_exception(base64);
 
     return input;
 }

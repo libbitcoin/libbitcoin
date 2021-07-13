@@ -23,8 +23,8 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
-#include <boost/throw_exception.hpp>
-#include <bitcoin/system/unicode/ifstream.hpp>
+#include <bitcoin/system/exceptions.hpp>
+#include <bitcoin/system/unicode/utf8_everywhere/utf8_ifstream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -100,9 +100,7 @@ bool parser::load_configuration_variables(variables_map& variables,
         ifstream file(path);
 
         if (!file.good())
-        {
-            BOOST_THROW_EXCEPTION(reading_file(path.c_str()));
-        }
+            throw ifstream_exception(path.c_str());
 
         const auto config = parse_config_file(file, config_settings);
         store(config, variables);

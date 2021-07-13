@@ -27,12 +27,10 @@
 #include <bitcoin/system/chain/output_point.hpp>
 #include <bitcoin/system/chain/script.hpp>
 #include <bitcoin/system/chain/witness.hpp>
+#include <bitcoin/system/crypto/crypto.hpp>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/math/hash.hpp>
-#include <bitcoin/system/utility/reader.hpp>
-#include <bitcoin/system/utility/thread.hpp>
-#include <bitcoin/system/utility/writer.hpp>
-#include <bitcoin/system/wallet/payment_address.hpp>
+#include <bitcoin/system/mutex.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -53,6 +51,7 @@ public:
 
     input(output_point&& previous_output, chain::script&& script,
         uint32_t sequence);
+
     input(const output_point& previous_output, const chain::script& script,
         uint32_t sequence);
 
@@ -112,11 +111,11 @@ public:
     uint32_t sequence() const;
     void set_sequence(uint32_t value);
 
-    /// The first payment address extracted (may be invalid).
-    wallet::payment_address address() const;
+    /////// The first payment address extracted (may be invalid).
+    ////typename wallet::payment_address address() const;
 
-    /// The payment addresses extracted from this input as a standard script.
-    wallet::payment_address::list addresses() const;
+    /////// The payment addresses extracted from this input as a standard script.
+    ////typename wallet::payment_address::list addresses() const;
 
     // Utilities.
     //-------------------------------------------------------------------------
@@ -138,15 +137,15 @@ public:
 
 protected:
     void reset();
-    void invalidate_cache() const;
+    ////void invalidate_cache() const;
 
 private:
-    typedef std::shared_ptr<wallet::payment_address::list> addresses_ptr;
+    ////typedef std::shared_ptr<typename wallet::payment_address::list> addresses_ptr;
 
-    addresses_ptr addresses_cache() const;
+    ////addresses_ptr addresses_cache() const;
 
-    mutable upgrade_mutex mutex_;
-    mutable addresses_ptr addresses_;
+    ////mutable upgrade_mutex mutex_;
+    ////mutable addresses_ptr addresses_;
 
     output_point previous_output_;
     chain::script script_;

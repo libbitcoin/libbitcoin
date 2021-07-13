@@ -20,13 +20,10 @@
 
 #include <cstdint>
 #include <utility>
+#include <bitcoin/system/assert.hpp>
+#include <bitcoin/system/chain/enums/magic_numbers.hpp>
 #include <bitcoin/system/constants.hpp>
-#include <bitcoin/system/message/messages.hpp>
-#include <bitcoin/system/utility/assert.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -150,13 +147,13 @@ point point::factory(reader& source, bool wire)
 
 bool point::from_data(const data_chunk& data, bool wire)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(istream, wire);
 }
 
 bool point::from_data(std::istream& stream, bool wire)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(source, wire);
 }
 
@@ -207,7 +204,7 @@ data_chunk point::to_data(bool wire) const
     data_chunk data;
     const auto size = serialized_size(wire);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(ostream, wire);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -216,13 +213,13 @@ data_chunk point::to_data(bool wire) const
 
 void point::to_data(std::ostream& stream, bool wire) const
 {
-    ostream_writer sink(stream);
-    to_data(sink, wire);
+    write::bytes::ostream out(stream);
+    to_data(out, wire);
 }
 
 void point::to_data(writer& sink, bool wire) const
 {
-    sink.write_hash(hash_);
+    sink.write_bytes(hash_);
 
     if (wire)
     {
@@ -299,12 +296,14 @@ uint64_t point::checksum() const
     // Use an offset to the middle of the hash to avoid coincidental mining
     // of values into the front or back of tx hash (not a security feature).
     // Use most possible bits of tx hash to make intentional collision hard.
-    const auto tx = from_little_endian_unsafe<uint64_t>(hash_.begin() + 12);
+    const data_slice slice(std::next(hash_.begin(), 12), hash_.end());
+
+    const auto bits = from_little_endian<uint64_t>(slice);
     const auto index = static_cast<uint64_t>(index_);
 
-    const auto tx_upper_49_bits = tx & mask;
+    const auto hash_upper_49_bits = bits & mask;
     const auto index_lower_15_bits = index & ~mask;
-    return tx_upper_49_bits | index_lower_15_bits;
+    return hash_upper_49_bits | index_lower_15_bits;
 }
 
 // Validation.

@@ -16,19 +16,16 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
+#include "../test.hpp"
 
 // TODO: move this into the tests by source file organization.
+
 BOOST_AUTO_TEST_SUITE(satoshi_words)
 
 BOOST_AUTO_TEST_CASE(satoshi_words_mainnet)
 {
     // Create mainnet genesis block (contains a single coinbase transaction).
-    const chain::block block = settings(config::settings::mainnet)
-        .genesis_block;
+    const chain::block block = settings(chain::selection::mainnet).genesis_block;
     const auto& transactions = block.transactions();
     BOOST_REQUIRE_EQUAL(transactions.size(), 1u);
 

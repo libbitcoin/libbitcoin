@@ -27,28 +27,23 @@
 #include <vector>
 #include <boost/optional.hpp>
 #include <bitcoin/system/chain/chain_state.hpp>
+#include <bitcoin/system/chain/enums/magic_numbers.hpp>
 #include <bitcoin/system/chain/header.hpp>
 #include <bitcoin/system/chain/input.hpp>
 #include <bitcoin/system/chain/output.hpp>
 #include <bitcoin/system/chain/script.hpp>
+#include <bitcoin/system/crypto/crypto.hpp>
 #include <bitcoin/system/constants.hpp>
+#include <bitcoin/system/data/data.hpp>
 #include <bitcoin/system/error.hpp>
-#include <bitcoin/system/math/hash.hpp>
-#include <bitcoin/system/math/limits.hpp>
-#include <bitcoin/system/machine/opcode.hpp>
-#include <bitcoin/system/machine/rule_fork.hpp>
-#include <bitcoin/system/message/messages.hpp>
-#include <bitcoin/system/utility/collection.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/math/math.hpp>
+#include <bitcoin/system/mutex.hpp>
+#include <bitcoin/system/optional.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
 namespace chain {
-
-using namespace bc::system::machine;
 
 #define RETURN_CACHED(name, type, context) \
     hash_mutex_.lock_upgrade(); \
@@ -71,7 +66,7 @@ template<class Source, class Put>
 bool read(Source& source, std::vector<Put>& puts, bool wire, bool witness)
 {
     auto result = true;
-    const auto count = source.read_size_little_endian();
+    const auto count = source.read_size();
 
     // Guard against potential for arbitrary memory allocation.
     if (count > max_block_size)
@@ -95,7 +90,7 @@ bool read(Source& source, std::vector<Put>& puts, bool wire, bool witness)
 template<class Sink, class Put>
 void write(Sink& sink, const std::vector<Put>& puts, bool wire, bool witness)
 {
-    sink.write_variable_little_endian(puts.size());
+    sink.write_variable(puts.size());
 
     const auto serialize = [&](const Put& put)
     {
@@ -186,21 +181,21 @@ transaction::transaction(uint32_t version, uint32_t locktime,
 // Private cache access for copy/move construction.
 transaction::hash_ptr transaction::hash_cache() const
 {
-    shared_lock lock(mutex_);
+    shared_lock lock(value_mutex_);
     return hash_;
 }
 
 // Private cache access for copy/move construction.
-transaction::optional_value transaction::total_input_value_cache() const
+optional64 transaction::total_input_value_cache() const
 {
-    shared_lock lock(mutex_);
+    shared_lock lock(value_mutex_);
     return total_input_value_;
 }
 
 // Private cache access for copy/move construction.
-transaction::optional_value transaction::total_output_value_cache() const
+optional64 transaction::total_output_value_cache() const
 {
-    shared_lock lock(mutex_);
+    shared_lock lock(value_mutex_);
     return total_output_value_;
 }
 
@@ -296,13 +291,13 @@ transaction transaction::factory(reader& source, const hash_digest& hash,
 
 bool transaction::from_data(const data_chunk& data, bool wire, bool witness)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(istream, wire, witness);
 }
 
 bool transaction::from_data(std::istream& stream, bool wire, bool witness)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(source, wire, witness);
 }
 
@@ -325,7 +320,7 @@ bool transaction::from_data(reader& source, bool wire, bool witness)
         if (marker)
         {
             // Skip over the peeked witness flag.
-            source.skip(1);
+            source.skip_byte();
             read(source, inputs_, wire, witness);
             read(source, outputs_, wire, witness);
             read_witnesses(source, inputs_);
@@ -343,8 +338,8 @@ bool transaction::from_data(reader& source, bool wire, bool witness)
         // Witness data is managed internal to inputs.
         read(source, outputs_, wire, witness);
         read(source, inputs_, wire, witness);
-        const auto locktime = source.read_variable_little_endian();
-        const auto version = source.read_variable_little_endian();
+        const auto locktime = source.read_variable();
+        const auto version = source.read_variable();
 
         if (locktime > max_uint32 || version > max_uint32)
             source.invalidate();
@@ -396,9 +391,9 @@ void transaction::reset()
     outputs_hash_.reset();
     inpoints_hash_.reset();
     sequences_hash_.reset();
-    segregated_ = boost::none;
-    total_input_value_ = boost::none;
-    total_output_value_ = boost::none;
+    segregated_ = none;
+    total_input_value_ = none;
+    total_output_value_ = none;
 }
 
 bool transaction::is_valid() const
@@ -424,7 +419,7 @@ data_chunk transaction::to_data(bool wire, bool witness) const
     // generate_signature_hash extension by addition of the sighash_type.
     data.reserve(size + sizeof(uint8_t));
 
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(ostream, wire, witness);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -436,8 +431,8 @@ void transaction::to_data(std::ostream& stream, bool wire, bool witness) const
     // Witness handling must be disabled for non-segregated txs.
     witness &= is_segregated();
 
-    ostream_writer sink(stream);
-    to_data(sink, wire, witness);
+    write::bytes::ostream out(stream);
+    to_data(out, wire, witness);
 }
 
 // Witness is not used by outputs, just for template normalization.
@@ -473,8 +468,8 @@ void transaction::to_data(writer& sink, bool wire, bool witness) const
         // Witness data is managed internal to inputs.
         write(sink, outputs_, wire, witness);
         write(sink, inputs_, wire, witness);
-        sink.write_variable_little_endian(locktime_);
-        sink.write_variable_little_endian(version_);
+        sink.write_variable(locktime_);
+        sink.write_variable(version_);
     }
 }
 
@@ -513,14 +508,14 @@ size_t transaction::serialized_size(bool wire, bool witness) const
     };
 
     // Must be both witness and wire encoding for bip144 serialization.
-    return (wire && witness ? sizeof(witness_marker) : 0)
-        + (wire && witness ? sizeof(witness_flag) : 0)
-        + (wire ? sizeof(version_) : message::variable_uint_size(version_))
-        + (wire ? sizeof(locktime_) : message::variable_uint_size(locktime_))
-        + message::variable_uint_size(inputs_.size())
-        + message::variable_uint_size(outputs_.size())
-        + std::accumulate(inputs_.begin(), inputs_.end(), size_t{0}, ins)
-        + std::accumulate(outputs_.begin(), outputs_.end(), size_t{0}, outs);
+    return ((wire && witness) ? sizeof(witness_marker) : zero)
+        + ((wire && witness) ? sizeof(witness_flag) : zero)
+        + (wire ? sizeof(version_) : variable_size(version_))
+        + (wire ? sizeof(locktime_) : variable_size(locktime_))
+        + variable_size(inputs_.size())
+        + variable_size(outputs_.size())
+        + std::accumulate(inputs_.begin(), inputs_.end(), zero, ins)
+        + std::accumulate(outputs_.begin(), outputs_.end(), zero, outs);
 }
 
 // Accessors.
@@ -564,16 +559,16 @@ void transaction::set_inputs(const input::list& value)
     invalidate_cache();
     inpoints_hash_.reset();
     sequences_hash_.reset();
-    segregated_ = boost::none;
-    total_input_value_ = boost::none;
+    segregated_ = none;
+    total_input_value_ = none;
 }
 
 void transaction::set_inputs(input::list&& value)
 {
     inputs_ = std::move(value);
     invalidate_cache();
-    segregated_ = boost::none;
-    total_input_value_ = boost::none;
+    segregated_ = none;
+    total_input_value_ = none;
 }
 
 output::list& transaction::outputs()
@@ -591,14 +586,14 @@ void transaction::set_outputs(const output::list& value)
     outputs_ = value;
     invalidate_cache();
     outputs_hash_.reset();
-    total_output_value_ = boost::none;
+    total_output_value_ = none;
 }
 
 void transaction::set_outputs(output::list&& value)
 {
     outputs_ = std::move(value);
     invalidate_cache();
-    total_output_value_ = boost::none;
+    total_output_value_ = none;
 }
 
 // Cache.
@@ -696,7 +691,7 @@ void transaction::strip_witness()
 
     ///////////////////////////////////////////////////////////////////////////
     // Critical Section
-    unique_lock lock(mutex_);
+    unique_lock lock(value_mutex_);
 
     segregated_ = false;
     std::for_each(inputs_.begin(), inputs_.end(), strip);
@@ -751,10 +746,11 @@ bool transaction::is_final(size_t block_height, uint32_t block_time) const
     const auto max_locktime = [=]()
     {
         return locktime_ < locktime_threshold ?
-            safe_unsigned<uint32_t>(block_height) : block_time;
+            safe_cast<uint32_t>(block_height) : block_time;
     };
 
-    return locktime_ == 0 || locktime_ < max_locktime() || all_inputs_final();
+    return is_zero(locktime_) || locktime_ < max_locktime() ||
+        all_inputs_final();
 }
 
 bool transaction::is_locked(size_t block_height,
@@ -775,76 +771,74 @@ bool transaction::is_locked(size_t block_height,
 // This is not a consensus rule, just detection of an irrational use.
 bool transaction::is_locktime_conflict() const
 {
-    return locktime_ != 0 && all_inputs_final();
+    return !is_zero(locktime_) && all_inputs_final();
 }
 
-// Returns max_uint64 in case of overflow.
+// Overflow returns max_uint64.
 uint64_t transaction::total_input_value() const
 {
     uint64_t value;
 
     ///////////////////////////////////////////////////////////////////////////
     // Critical Section
-    mutex_.lock_upgrade();
+    value_mutex_.lock_upgrade();
 
-    if (total_input_value_ != boost::none)
+    if (!is_none(total_input_value_))
     {
         value = total_input_value_.get();
-        mutex_.unlock_upgrade();
+        value_mutex_.unlock_upgrade();
         //---------------------------------------------------------------------
         return value;
     }
 
-    mutex_.unlock_upgrade_and_lock();
+    value_mutex_.unlock_upgrade_and_lock();
     //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    ////static_assert(max_money() < max_uint64, "overflow sentinel invalid");
     const auto sum = [](uint64_t total, const input& input)
     {
         const auto& prevout = input.previous_output().metadata.cache;
         const auto missing = !prevout.is_valid();
 
         // Treat missing previous outputs as zero-valued, no math on sentinel.
-        return ceiling_add(total, missing ? 0 : prevout.value());
+        return ceilinged_add(total, missing ? 0u : prevout.value());
     };
 
     value = std::accumulate(inputs_.begin(), inputs_.end(), uint64_t(0), sum);
     total_input_value_ = value;
-    mutex_.unlock();
+    value_mutex_.unlock();
     ///////////////////////////////////////////////////////////////////////////
 
     return value;
 }
 
-// Returns max_uint64 in case of overflow.
+// Overflow returns max_uint64.
 uint64_t transaction::total_output_value() const
 {
     uint64_t value;
 
     ///////////////////////////////////////////////////////////////////////////
     // Critical Section
-    mutex_.lock_upgrade();
+    value_mutex_.lock_upgrade();
 
-    if (total_output_value_ != boost::none)
+    if (!is_none(total_output_value_))
     {
         value = total_output_value_.get();
-        mutex_.unlock_upgrade();
+        value_mutex_.unlock_upgrade();
         //---------------------------------------------------------------------
         return value;
     }
 
-    mutex_.unlock_upgrade_and_lock();
+    value_mutex_.unlock_upgrade_and_lock();
     //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    ////static_assert(max_money() < max_uint64, "overflow sentinel invalid");
     const auto sum = [](uint64_t total, const output& output)
     {
-        return ceiling_add(total, output.value());
+        return ceilinged_add(total, output.value());
     };
 
     value = std::accumulate(outputs_.begin(), outputs_.end(), uint64_t(0), sum);
     total_output_value_ = value;
-    mutex_.unlock();
+    value_mutex_.unlock();
     ///////////////////////////////////////////////////////////////////////////
 
     return value;
@@ -852,7 +846,7 @@ uint64_t transaction::total_output_value() const
 
 uint64_t transaction::fees() const
 {
-    return floor_subtract(total_input_value(), total_output_value());
+    return floored_subtract(total_input_value(), total_output_value());
 }
 
 bool transaction::is_overspent() const
@@ -869,22 +863,22 @@ size_t transaction::signature_operations() const
     return state ? signature_operations(bip16, bip141) : max_size_t;
 }
 
-// Returns max_size_t in case of overflow.
+// Overflow returns max_size_t.
 size_t transaction::signature_operations(bool bip16, bool bip141) const
 {
     const auto in = [bip16, bip141](size_t total, const input& input)
     {
         // This includes BIP16 p2sh additional sigops if prevout is cached.
-        return ceiling_add(total, input.signature_operations(bip16, bip141));
+        return ceilinged_add(total, input.signature_operations(bip16, bip141));
     };
 
     const auto out = [bip141](size_t total, const output& output)
     {
-        return ceiling_add(total, output.signature_operations(bip141));
+        return ceilinged_add(total, output.signature_operations(bip141));
     };
 
-    return std::accumulate(inputs_.begin(), inputs_.end(), size_t{0}, in) +
-        std::accumulate(outputs_.begin(), outputs_.end(), size_t{0}, out);
+    return std::accumulate(inputs_.begin(), inputs_.end(), zero, in) +
+        std::accumulate(outputs_.begin(), outputs_.end(), zero, out);
 }
 
 size_t transaction::weight() const
@@ -910,16 +904,16 @@ bool transaction::is_missing_previous_outputs() const
 
 point::list transaction::previous_outputs() const
 {
-    point::list prevouts;
-    prevouts.reserve(inputs_.size());
-    const auto pointer = [&prevouts](const input& input)
-    {
-        prevouts.push_back(input.previous_output());
-    };
+    point::list out(no_fill_allocator);
+    out.resize(inputs_.size());
 
-    const auto& ins = inputs_;
-    std::for_each(ins.begin(), ins.end(), pointer);
-    return prevouts;
+    std::transform(inputs_.begin(), inputs_.end(), out.begin(),
+        [](const input& input)
+        {
+            return input.previous_output();
+        });
+
+    return out;
 }
 
 point::list transaction::missing_previous_outputs() const
@@ -943,24 +937,21 @@ point::list transaction::missing_previous_outputs() const
 hash_list transaction::missing_previous_transactions() const
 {
     const auto points = missing_previous_outputs();
-    hash_list hashes;
-    hashes.reserve(points.size());
-    const auto hasher = [&hashes](const output_point& point)
-    {
-        hashes.push_back(point.hash());
-    };
+    hash_list hashes(no_fill_allocator);
+    hashes.resize(points.size());
 
-    std::for_each(points.begin(), points.end(), hasher);
-    return distinct(hashes);
+    std::transform(points.begin(), points.end(), hashes.begin(),
+        [](const output_point& point)
+        {
+            return point.hash();
+        });
+
+    return std::move(distinct(hashes));
 }
 
 bool transaction::is_internal_double_spend() const
 {
-    auto prevouts = previous_outputs();
-    std::sort(prevouts.begin(), prevouts.end());
-    const auto distinct_end = std::unique(prevouts.begin(), prevouts.end());
-    const auto distinct = (distinct_end == prevouts.end());
-    return !distinct;
+    return !is_distinct(previous_outputs());
 }
 
 bool transaction::is_confirmed_double_spend() const
@@ -999,17 +990,17 @@ bool transaction::is_segregated() const
 
     ///////////////////////////////////////////////////////////////////////////
     // Critical Section
-    mutex_.lock_upgrade();
+    value_mutex_.lock_upgrade();
 
-    if (segregated_ != boost::none)
+    if (!is_none(segregated_))
     {
         value = segregated_.get();
-        mutex_.unlock_upgrade();
+        value_mutex_.unlock_upgrade();
         //---------------------------------------------------------------------
         return value;
     }
 
-    mutex_.unlock_upgrade_and_lock();
+    value_mutex_.unlock_upgrade_and_lock();
     //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     const auto segregated = [](const input& input)
@@ -1019,7 +1010,7 @@ bool transaction::is_segregated() const
 
     // If no block tx is has witness data the commitment is optional (bip141).
     value = std::any_of(inputs_.begin(), inputs_.end(), segregated);
-    mutex_.unlock();
+    value_mutex_.unlock();
     ///////////////////////////////////////////////////////////////////////////
 
     return value;

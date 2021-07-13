@@ -16,15 +16,8 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(stealth_record_tests)
-
-BOOST_AUTO_TEST_CASE(stealth_record__constructor_1__always__invalid)
-{
-}
 
 BOOST_AUTO_TEST_SUITE_END()

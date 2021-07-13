@@ -16,10 +16,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(get_address_tests)
 
@@ -39,7 +36,7 @@ BOOST_AUTO_TEST_CASE(roundtrip_to_data_factory_stream)
 {
     const message::get_address expected{};
     const auto data = expected.to_data(message::version::level::minimum);
-    data_source istream(data);
+    stream::in::copy istream(data);
     const auto result = message::get_address::factory(
         message::version::level::minimum, istream);
 
@@ -52,8 +49,7 @@ BOOST_AUTO_TEST_CASE(roundtrip_to_data_factory_reader)
 {
     const message::get_address expected{};
     const auto data = expected.to_data(message::version::level::minimum);
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = message::get_address::factory(
         message::version::level::minimum, source);
 

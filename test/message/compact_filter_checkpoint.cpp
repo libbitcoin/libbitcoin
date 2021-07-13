@@ -19,10 +19,7 @@
 
 // Sponsored in part by Digital Contract Design, LLC
 
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(compact_filter_checkpoint_tests)
 
@@ -125,7 +122,7 @@ BOOST_AUTO_TEST_CASE(compact_filter_checkpoint__from_data__insufficient_bytes__f
 {
     const auto raw = to_chunk(base16_literal(
         "0b"
-        "01cf1a02915dc0137cae81ea04161dbebc0d7ec44"));
+        "01cf1a02915dc0137cae81ea04161dbebc0d7ec4"));
 
     message::compact_filter_checkpoint instance;
     BOOST_REQUIRE_EQUAL(false, instance.from_data(message::compact_filter_checkpoint::version_minimum, raw));
@@ -212,7 +209,7 @@ BOOST_AUTO_TEST_CASE(compact_filter_checkpoint__factory_2__valid_input__success)
     const auto data = expected.to_data(message::compact_filter_checkpoint::version_minimum);
     BOOST_REQUIRE(raw == data);
 
-    data_source istream(data);
+    stream::in::copy istream(data);
     auto result = message::compact_filter_checkpoint::factory(message::compact_filter_checkpoint::version_minimum, istream);
 
     BOOST_REQUIRE(result.is_valid());
@@ -238,8 +235,7 @@ BOOST_AUTO_TEST_CASE(compact_filter_checkpoint__factory_3__valid_input__success)
     const auto data = expected.to_data(message::compact_filter_checkpoint::version_minimum);
     BOOST_REQUIRE(raw == data);
 
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = message::compact_filter_checkpoint::factory(message::compact_filter_checkpoint::version_minimum, source);
 
     BOOST_REQUIRE(result.is_valid());

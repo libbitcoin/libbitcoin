@@ -21,11 +21,12 @@
 #include <sstream>
 #include <string>
 #include <utility>
-#include <boost/program_options.hpp>
-#include <bitcoin/system/chain/output_point.hpp>
+#include <bitcoin/system/chain/chain.hpp>
 #include <bitcoin/system/config/hash256.hpp>
-#include <bitcoin/system/math/hash.hpp>
-#include <bitcoin/system/utility/string.hpp>
+#include <bitcoin/system/crypto/crypto.hpp>
+#include <bitcoin/system/data/data.hpp>
+#include <bitcoin/system/exceptions.hpp>
+#include <bitcoin/system/serial/serial.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -40,7 +41,7 @@ static bool decode_point(chain::output_point& point, const std::string& tuple)
 {
     uint32_t index;
     const auto tokens = split(tuple, point::delimiter);
-    if (tokens.size() != 2 || !deserialize(index, tokens[1], true))
+    if (tokens.size() != 2 || !deserialize(index, tokens[1]))
         return false;
 
     // Validate and deserialize the transaction hash.
@@ -94,9 +95,7 @@ std::istream& operator>>(std::istream& input, point& argument)
     input >> tuple;
 
     if (!decode_point(argument.value_, tuple))
-    {
-        BOOST_THROW_EXCEPTION(invalid_option_value(tuple));
-    }
+        throw istream_exception(tuple);
 
     return input;
 }

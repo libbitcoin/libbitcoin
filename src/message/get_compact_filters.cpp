@@ -22,13 +22,9 @@
 #include <bitcoin/system/message/get_compact_filters.hpp>
 
 #include <initializer_list>
-#include <bitcoin/system/math/limits.hpp>
-#include <bitcoin/system/message/messages.hpp>
+#include <bitcoin/system/message/message.hpp>
 #include <bitcoin/system/message/version.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -109,13 +105,13 @@ void get_compact_filters::reset()
 
 bool get_compact_filters::from_data(uint32_t version, const data_chunk& data)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(version, istream);
 }
 
 bool get_compact_filters::from_data(uint32_t version, std::istream& stream)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(version, source);
 }
 
@@ -141,7 +137,7 @@ data_chunk get_compact_filters::to_data(uint32_t version) const
     data_chunk data;
     const auto size = serialized_size(version);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(version, ostream);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -150,15 +146,15 @@ data_chunk get_compact_filters::to_data(uint32_t version) const
 
 void get_compact_filters::to_data(uint32_t version, std::ostream& stream) const
 {
-    ostream_writer sink(stream);
-    to_data(version, sink);
+    write::bytes::ostream out(stream);
+    to_data(version, out);
 }
 
 void get_compact_filters::to_data(uint32_t , writer& sink) const
 {
     sink.write_byte(filter_type_);
     sink.write_4_bytes_little_endian(start_height_);
-    sink.write_hash(stop_hash_);
+    sink.write_bytes(stop_hash_);
 }
 
 size_t get_compact_filters::satoshi_fixed_size()

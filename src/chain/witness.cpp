@@ -25,19 +25,15 @@
 #include <numeric>
 #include <string>
 #include <utility>
-#include <boost/algorithm/string.hpp>
+#include <bitcoin/system/assert.hpp>
+#include <bitcoin/system/chain/enums/magic_numbers.hpp>
+#include <bitcoin/system/chain/operation.hpp>
 #include <bitcoin/system/chain/script.hpp>
+#include <bitcoin/system/constants.hpp>
+#include <bitcoin/system/data/data.hpp>
 #include <bitcoin/system/error.hpp>
-#include <bitcoin/system/machine/operation.hpp>
-#include <bitcoin/system/machine/program.hpp>
-#include <bitcoin/system/message/messages.hpp>
-#include <bitcoin/system/utility/assert.hpp>
-#include <bitcoin/system/utility/collection.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/data.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/machine/machine.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -143,13 +139,13 @@ witness witness::factory(reader& source, bool prefix)
 
 bool witness::from_data(const data_chunk& encoded, bool prefix)
 {
-    data_source istream(encoded);
+    stream::in::copy istream(encoded);
     return from_data(istream, prefix);
 }
 
 bool witness::from_data(std::istream& stream, bool prefix)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(source, prefix);
 }
 
@@ -162,7 +158,7 @@ bool witness::from_data(reader& source, bool prefix)
     const auto read_element = [](reader& source)
     {
         // Tokens encoded as variable integer prefixed byte array (bip144).
-        const auto size = source.read_size_little_endian();
+        const auto size = source.read_size();
 
         // The max_script_size and max_push_data_size constants limit
         // evaluation, but not all stacks evaluate, so use max_block_weight
@@ -181,7 +177,7 @@ bool witness::from_data(reader& source, bool prefix)
     {
         // Witness prefix is an element count, not byte length (unlike script).
         // On wire each witness is prefixed with number of elements (bip144).
-        for (auto count = source.read_size_little_endian(); count > 0; --count)
+        for (auto count = source.read_size(); count > 0; --count)
              stack_.push_back(read_element(source));
     }
     else
@@ -203,10 +199,10 @@ size_t witness::serialized_size(const data_stack& stack)
     {
         // Tokens encoded as variable integer prefixed byte array (bip144).
         const auto size = element.size();
-        return total + message::variable_uint_size(size) + size;
+        return total + variable_size(size) + size;
     };
 
-    return std::accumulate(stack.begin(), stack.end(), size_t(0), sum);
+    return std::accumulate(stack.begin(), stack.end(), zero, sum);
 }
 
 // protected
@@ -231,7 +227,7 @@ data_chunk witness::to_data(bool prefix) const
     data_chunk data;
     const auto size = serialized_size(prefix);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(ostream, prefix);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -240,20 +236,20 @@ data_chunk witness::to_data(bool prefix) const
 
 void witness::to_data(std::ostream& stream, bool prefix) const
 {
-    ostream_writer sink(stream);
-    to_data(sink, prefix);
+    write::bytes::ostream out(stream);
+    to_data(out, prefix);
 }
 
 void witness::to_data(writer& sink, bool prefix) const
 {
     // Witness prefix is an element count, not byte length (unlike script).
     if (prefix)
-        sink.write_variable_little_endian(stack_.size());
+        sink.write_variable(stack_.size());
 
     const auto serialize = [&sink](const data_chunk& element)
     {
         // Tokens encoded as variable integer prefixed byte array (bip144).
-        sink.write_variable_little_endian(element.size());
+        sink.write_variable(element.size());
         sink.write_bytes(element);
     };
 
@@ -273,7 +269,7 @@ std::string witness::to_string() const
     };
 
     std::for_each(stack_.begin(), stack_.end(), serialize);
-    return boost::trim_copy(text);
+    return trim_copy(text);
 }
 
 // Iteration.
@@ -329,7 +325,7 @@ witness::iterator witness::end() const
 size_t witness::serialized_size(bool prefix) const
 {
     // Witness prefix is an element count, not a byte length (unlike script).
-    return (prefix ? message::variable_uint_size(stack_.size()) : 0u) +
+    return (prefix ? variable_size(stack_.size()) : 0u) +
         serialized_size(stack_);
 }
 
@@ -365,9 +361,8 @@ bool witness::is_reserved_pattern(const data_stack& stack)
         stack[0].size() == hash_size;
 }
 
-// private
 // This is an internal optimization over using script::to_pay_key_hash_pattern.
-operation::list witness::to_pay_key_hash(data_chunk&& program)
+inline operation::list to_pay_key_hash(data_chunk&& program)
 {
     BITCOIN_ASSERT(program.size() == short_hash_size);
 

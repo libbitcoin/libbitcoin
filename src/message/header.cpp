@@ -22,14 +22,9 @@
 #include <cstddef>
 #include <istream>
 #include <utility>
-#include <bitcoin/system/chain/header.hpp>
-#include <bitcoin/system/chain/transaction.hpp>
-#include <bitcoin/system/message/messages.hpp>
+#include <bitcoin/system/message/message.hpp>
 #include <bitcoin/system/message/version.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -64,7 +59,7 @@ size_t header::satoshi_fixed_size(uint32_t version)
 {
     const auto canonical = (version == version::level::canonical);
     return chain::header::satoshi_fixed_size() +
-        (canonical ? 0 : variable_uint_size(0));
+        (canonical ? 0 : variable_size(0));
 }
 
 header::header()
@@ -109,13 +104,13 @@ header::header(header&& other)
 
 bool header::from_data(uint32_t version, const data_chunk& data)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(version, istream);
 }
 
 bool header::from_data(uint32_t version, std::istream& stream)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(version, source);
 }
 
@@ -140,7 +135,7 @@ data_chunk header::to_data(uint32_t version) const
     data_chunk data;
     const auto size = serialized_size(version);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(version, ostream);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -149,8 +144,8 @@ data_chunk header::to_data(uint32_t version) const
 
 void header::to_data(uint32_t version, std::ostream& stream) const
 {
-    ostream_writer sink(stream);
-    to_data(version, sink);
+    write::bytes::ostream out(stream);
+    to_data(version, out);
 }
 
 void header::to_data(uint32_t version, writer& sink) const
@@ -158,7 +153,7 @@ void header::to_data(uint32_t version, writer& sink) const
     chain::header::to_data(sink);
 
     if (version != version::level::canonical)
-        sink.write_variable_little_endian(0);
+        sink.write_variable(0);
 }
 
 void header::reset()

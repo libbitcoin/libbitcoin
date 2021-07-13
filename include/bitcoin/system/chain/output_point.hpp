@@ -24,7 +24,6 @@
 #include <vector>
 #include <bitcoin/system/chain/output.hpp>
 #include <bitcoin/system/chain/point.hpp>
-#include <bitcoin/system/chain/script.hpp>
 #include <bitcoin/system/define.hpp>
 
 namespace libbitcoin {

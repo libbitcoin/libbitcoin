@@ -18,14 +18,10 @@
  */
 #include <bitcoin/system/message/filter_load.hpp>
 
-#include <bitcoin/system/math/limits.hpp>
-#include <bitcoin/system/message/messages.hpp>
+#include <bitcoin/system/assert.hpp>
+#include <bitcoin/system/message/message.hpp>
 #include <bitcoin/system/message/version.hpp>
-#include <bitcoin/system/utility/assert.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -109,13 +105,13 @@ void filter_load::reset()
 
 bool filter_load::from_data(uint32_t version, const data_chunk& data)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(version, istream);
 }
 
 bool filter_load::from_data(uint32_t version, std::istream& stream)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(version, source);
 }
 
@@ -123,16 +119,16 @@ bool filter_load::from_data(uint32_t version, reader& source)
 {
     reset();
 
-    const auto size = source.read_size_little_endian();
+    const auto size = source.read_size();
 
-    if (size > max_filter_load)
+    if (size > chain::max_filter_load)
         source.invalidate();
     else
         filter_ = source.read_bytes(size);
 
     hash_functions_ = source.read_4_bytes_little_endian();
 
-    if (hash_functions_ > max_filter_functions)
+    if (hash_functions_ > chain::max_filter_functions)
         source.invalidate();
 
     tweak_ = source.read_4_bytes_little_endian();
@@ -152,7 +148,7 @@ data_chunk filter_load::to_data(uint32_t version) const
     data_chunk data;
     const auto size = serialized_size(version);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(version, ostream);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -161,13 +157,13 @@ data_chunk filter_load::to_data(uint32_t version) const
 
 void filter_load::to_data(uint32_t version, std::ostream& stream) const
 {
-    ostream_writer sink(stream);
-    to_data(version, sink);
+    write::bytes::ostream out(stream);
+    to_data(version, out);
 }
 
 void filter_load::to_data(uint32_t, writer& sink) const
 {
-    sink.write_variable_little_endian(filter_.size());
+    sink.write_variable(filter_.size());
     sink.write_bytes(filter_);
     sink.write_4_bytes_little_endian(hash_functions_);
     sink.write_4_bytes_little_endian(tweak_);
@@ -176,7 +172,7 @@ void filter_load::to_data(uint32_t, writer& sink) const
 
 size_t filter_load::serialized_size(uint32_t) const
 {
-    return 1u + 4u + 4u + variable_uint_size(filter_.size()) +
+    return 1u + 4u + 4u + variable_size(filter_.size()) +
         filter_.size();
 }
 

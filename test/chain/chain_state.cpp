@@ -16,10 +16,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(chain_chain_state_tests)
 
@@ -40,20 +37,20 @@ chain::chain_state::data get_values(size_t retargeting_interval)
 
 BOOST_AUTO_TEST_CASE(chain_state__work_required_retarget__overflow_patch_disabled__returns_lower_value)
 {
-    settings settings(config::settings::mainnet);
+    settings settings(chain::selection::mainnet);
     settings.proof_of_work_limit = 0x1e0fffff;
     const auto values = get_values(settings.retargeting_interval());
-    const auto forks = machine::rule_fork::retarget;
+    const auto forks = chain::rule_fork::retarget;
     const auto work = test_chain_state::work_required(values, forks, settings);
     BOOST_REQUIRE_EQUAL(work, 0x1e0884d1);
 }
 
 BOOST_AUTO_TEST_CASE(chain_state__work_required_retarget__overflow_patch_enabled__returns_correct_value)
 {
-    settings settings(config::settings::mainnet);
+    settings settings(chain::selection::mainnet);
     settings.proof_of_work_limit = 0x1e0fffff;
     const auto values = get_values(settings.retargeting_interval());
-    const auto forks = machine::rule_fork::retarget | machine::rule_fork::retarget_overflow_patch;
+    const auto forks = chain::rule_fork::retarget | chain::rule_fork::retarget_overflow_patch;
     const auto work = test_chain_state::work_required(values, forks, settings);
     BOOST_REQUIRE_EQUAL(work, settings.proof_of_work_limit);
 }

@@ -25,14 +25,14 @@
 #include <vector>
 #include <bitcoin/system/constants.hpp>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/utility/data.hpp>
-#include <bitcoin/system/utility/reader.hpp>
-#include <bitcoin/system/utility/writer.hpp>
+#include <bitcoin/system/data/data.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
 namespace chain {
 
+// TODO: move this to client/server.
 /// This class models blockchain storage of a payment record.
 class BC_API payment_record
 {

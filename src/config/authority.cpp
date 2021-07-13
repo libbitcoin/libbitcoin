@@ -20,21 +20,22 @@
 
 #include <algorithm>
 #include <sstream>
+#include <boost/asio.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/program_options.hpp>
 #include <boost/regex.hpp>
-#include <bitcoin/system/utility/asio.hpp>
-#include <bitcoin/system/utility/assert.hpp>
-#include <bitcoin/system/utility/string.hpp>
+#include <bitcoin/system/assert.hpp>
+#include <bitcoin/system/data/string.hpp>
+#include <bitcoin/system/exceptions.hpp>
+#include <bitcoin/system/message/network_address.hpp>
 
 namespace libbitcoin {
 namespace system {
 namespace config {
 
 using namespace boost;
-using namespace boost::program_options;
+using namespace boost::asio;
 
 // host:    [2001:db8::2] or  2001:db8::2  or 1.2.240.1
 // returns: [2001:db8::2] or [2001:db8::2] or 1.2.240.1
@@ -63,14 +64,14 @@ static std::string to_ipv6(const std::string& ipv4_address)
     return std::string("::ffff:") + ipv4_address;
 }
 
-static asio::ipv6 to_ipv6(const asio::ipv4& ipv4_address)
+static ip::address_v6 to_ipv6(const ip::address_v4& ipv4_address)
 {
     // Create an IPv6 mapped IPv4 address via serialization.
     const auto ipv6 = to_ipv6(ipv4_address.to_string());
-    return asio::ipv6::from_string(ipv6);
+    return ip::address_v6::from_string(ipv6);
 }
 
-static asio::ipv6 to_ipv6(const asio::address& ip_address)
+static ip::address_v6 to_ipv6(const ip::address& ip_address)
 {
     if (ip_address.is_v6())
         return ip_address.to_v6();
@@ -81,7 +82,7 @@ static asio::ipv6 to_ipv6(const asio::address& ip_address)
     return to_ipv6(ip_address.to_v4());
 }
 
-static std::string to_ipv4_hostname(const asio::address& ip_address)
+static std::string to_ipv4_hostname(const ip::address& ip_address)
 {
     // std::regex requires gcc 4.9, so we are using boost::regex for now.
     static const regex regular("^::ffff:([0-9\\.]+)$");
@@ -95,7 +96,7 @@ static std::string to_ipv4_hostname(const asio::address& ip_address)
     return match[1];
 }
 
-static std::string to_ipv6_hostname(const asio::address& ip_address)
+static std::string to_ipv6_hostname(const ip::address& ip_address)
 {
     // IPv6 URLs use a bracketed IPv6 address, see rfc2732.
     const auto hostname = format("[%1%]") % to_ipv6(ip_address);
@@ -124,16 +125,16 @@ authority::authority(const message::network_address& address)
 {
 }
 
-static asio::ipv6 to_boost_address(const message::ip_address& in)
+static ip::address_v6 to_boost_address(const message::ip_address& in)
 {
-    asio::ipv6::bytes_type bytes;
+    ip::address_v6::bytes_type bytes;
     BITCOIN_ASSERT(bytes.size() == in.size());
     std::copy_n(in.begin(), in.size(), bytes.begin());
-    const asio::ipv6 out(bytes);
+    const ip::address_v6 out(bytes);
     return out;
 }
 
-static message::ip_address to_bc_address(const asio::ipv6& in)
+static message::ip_address to_bc_address(const ip::address_v6& in)
 {
     message::ip_address out;
     const auto bytes = in.to_bytes();
@@ -153,12 +154,12 @@ authority::authority(const std::string& host, uint16_t port)
 {
 }
 
-authority::authority(const asio::address& ip, uint16_t port)
+authority::authority(const ip::address& ip, uint16_t port)
   : ip_(to_ipv6(ip)), port_(port)
 {
 }
 
-authority::authority(const asio::endpoint& endpoint)
+authority::authority(const ip::tcp::endpoint& endpoint)
   : authority(endpoint.address(), endpoint.port())
 {
 }
@@ -168,7 +169,7 @@ authority::operator bool() const
     return port_ != 0;
 }
 
-asio::ipv6 authority::asio_ip() const
+ip::address_v6 authority::asio_ip() const
 {
     return ip_;
 }
@@ -229,9 +230,7 @@ std::istream& operator>>(std::istream& input, authority& argument)
 
     sregex_iterator it(value.begin(), value.end(), regular), end;
     if (it == end)
-    {
-        BOOST_THROW_EXCEPTION(invalid_option_value(value));
-    }
+        throw istream_exception(value);
 
     const auto& match = *it;
     std::string port(match[5]);
@@ -241,12 +240,12 @@ std::istream& operator>>(std::istream& input, authority& argument)
 
     try
     {
-        argument.ip_ = asio::ipv6::from_string(ip_address);
+        argument.ip_ = ip::address_v6::from_string(ip_address);
         argument.port_ = port.empty() ? 0 : lexical_cast<uint16_t>(port);
     }
     catch (const boost::exception&)
     {
-        BOOST_THROW_EXCEPTION(invalid_option_value(value));
+        throw istream_exception(value);
     }
 
     return input;

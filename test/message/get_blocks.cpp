@@ -16,10 +16,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(get_blocks_tests)
 
@@ -146,7 +143,7 @@ BOOST_AUTO_TEST_CASE(get_blocks__factory_2__valid_input__success)
     };
 
     const auto data = expected.to_data(message::version::level::minimum);
-    data_source istream(data);
+    stream::in::copy istream(data);
     const auto result = message::get_blocks::factory(
         message::version::level::minimum, istream);
 
@@ -173,8 +170,7 @@ BOOST_AUTO_TEST_CASE(get_blocks__factory_3__valid_input__success)
     };
 
     const auto data = expected.to_data(message::version::level::minimum);
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = message::get_blocks::factory(
         message::version::level::minimum, source);
 
@@ -184,6 +180,53 @@ BOOST_AUTO_TEST_CASE(get_blocks__factory_3__valid_input__success)
         result.serialized_size(message::version::level::minimum));
     BOOST_REQUIRE_EQUAL(expected.serialized_size(message::version::level::minimum),
         result.serialized_size(message::version::level::minimum));
+}
+
+BOOST_AUTO_TEST_CASE(get_blocks__locator_size__first_11__expected)
+{
+    BOOST_REQUIRE_EQUAL(message::get_blocks::locator_size(0), 1u);
+    BOOST_REQUIRE_EQUAL(message::get_blocks::locator_size(1), 2u);
+    BOOST_REQUIRE_EQUAL(message::get_blocks::locator_size(2), 3u);
+    BOOST_REQUIRE_EQUAL(message::get_blocks::locator_size(3), 4u);
+    BOOST_REQUIRE_EQUAL(message::get_blocks::locator_size(4), 5u);
+    BOOST_REQUIRE_EQUAL(message::get_blocks::locator_size(5), 6u);
+    BOOST_REQUIRE_EQUAL(message::get_blocks::locator_size(6), 7u);
+    BOOST_REQUIRE_EQUAL(message::get_blocks::locator_size(7), 8u);
+    BOOST_REQUIRE_EQUAL(message::get_blocks::locator_size(8), 9u);
+    BOOST_REQUIRE_EQUAL(message::get_blocks::locator_size(9), 10u);
+    BOOST_REQUIRE_EQUAL(message::get_blocks::locator_size(10), 11u);
+}
+
+BOOST_AUTO_TEST_CASE(get_blocks__locator_size__10_plus_logs__expected)
+{
+    // This is not an exact representation of the math, since the log is not
+    // over the amount less 10 (or over the full amount) - but shows the magnitude.
+    BOOST_REQUIRE_EQUAL(message::get_blocks::locator_size(10 + 128), 10u + floored_log2(128u));
+    BOOST_REQUIRE_EQUAL(message::get_blocks::locator_size(10 + 256), 10u + floored_log2(256u));
+    BOOST_REQUIRE_EQUAL(message::get_blocks::locator_size(10 + 512), 10u + floored_log2(512u));
+}
+
+BOOST_AUTO_TEST_CASE(get_blocks__locator_heights__top_7__returns_7_through_0)
+{
+    const message::get_blocks::indexes expected{ 7u, 6u, 5u, 4u, 3u, 2u, 1u, 0u };
+    const auto top = 7u;
+    auto result = message::get_blocks::locator_heights(top);
+    BOOST_REQUIRE_EQUAL(expected.size(), result.size());
+    BOOST_REQUIRE(expected == result);
+}
+
+BOOST_AUTO_TEST_CASE(get_blocks__locator_heights__top_138__returns_138_through_129_and_backed_off_to_0)
+{
+    const message::get_blocks::indexes expected
+    {
+        138u, 137u, 136u, 135u, 134u, 133u, 132u, 131u, 130u, 129u,
+        127u, 123u, 115u,  99u,  67u,   3u,   0u
+    };
+
+    const auto top = 138u;
+    auto result = message::get_blocks::locator_heights(top);
+    BOOST_REQUIRE_EQUAL(expected.size(), result.size());
+    BOOST_REQUIRE(expected == result);
 }
 
 BOOST_AUTO_TEST_CASE(get_blocks__start_hashes_accessor_1__always__returns_initialized_value)

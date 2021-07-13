@@ -19,8 +19,7 @@
 #include <bitcoin/system/config/parameter.hpp>
 
 #include <boost/program_options.hpp>
-#include <bitcoin/system/utility/collection.hpp>
-#include <bitcoin/system/utility/string.hpp>
+#include <bitcoin/system/data/data.hpp>
 
 namespace po = boost::program_options;
 using namespace libbitcoin::system::config;
@@ -53,7 +52,7 @@ void parameter::initialize(const po::option_description& option,
 int parameter::position(const po::option_description& option,
     const argument_list& arguments) const
 {
-    return find_pair_position(arguments, option.long_name());
+    return static_cast<int>(find_pair_position(arguments, option.long_name()));
 }
 
 // 100% unit coverage, all three scenarios (long, short, both)

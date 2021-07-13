@@ -16,11 +16,8 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
+#include "../test.hpp"
 #include <chrono>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
 
 BOOST_AUTO_TEST_SUITE(chain_header_tests)
 
@@ -145,7 +142,7 @@ BOOST_AUTO_TEST_CASE(header__factory_2__valid_input__success)
     };
 
     const auto data = expected.to_data();
-    data_source istream(data);
+    stream::in::copy istream(data);
 
     const auto result = chain::header::factory(istream);
 
@@ -166,8 +163,7 @@ BOOST_AUTO_TEST_CASE(header__factory_3__valid_input__success)
     };
 
     const auto data = expected.to_data();
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
 
     const auto result = chain::header::factory(source);
 
@@ -388,7 +384,7 @@ BOOST_AUTO_TEST_CASE(header__is_valid_timestamp__timestamp_greater_than_2_hours_
 
 BOOST_AUTO_TEST_CASE(header__is_valid_proof_of_work__bits_exceeds_maximum__returns_false)
 {
-    const settings settings(config::settings::mainnet);
+    const settings settings(chain::selection::mainnet);
     chain::header instance;
     instance.set_bits(settings.proof_of_work_limit + 1);
     BOOST_REQUIRE(!instance.is_valid_proof_of_work(settings.proof_of_work_limit, false));
@@ -396,7 +392,7 @@ BOOST_AUTO_TEST_CASE(header__is_valid_proof_of_work__bits_exceeds_maximum__retur
 
 BOOST_AUTO_TEST_CASE(header__is_valid_proof_of_work__hash_greater_bits__returns_false)
 {
-    const settings settings(config::settings::mainnet);
+    const settings settings(chain::selection::mainnet);
     const chain::header instance(
         11234u,
         hash_literal("abababababababababababababababababababababababababababababababab"),
@@ -410,7 +406,7 @@ BOOST_AUTO_TEST_CASE(header__is_valid_proof_of_work__hash_greater_bits__returns_
 
 BOOST_AUTO_TEST_CASE(header__is_valid_proof_of_work__hash_less_than_bits__returns_true)
 {
-    const settings settings(config::settings::mainnet);
+    const settings settings(chain::selection::mainnet);
     const chain::header instance(
         4u,
         hash_literal("000000000000000003ddc1e929e2944b8b0039af9aa0d826c480a83d8b39c373"),
@@ -424,7 +420,7 @@ BOOST_AUTO_TEST_CASE(header__is_valid_proof_of_work__hash_less_than_bits__return
 
 BOOST_AUTO_TEST_CASE(header__is_valid_scrypt_proof_of_work__hash_greater_than_bits__returns_false)
 {
-    const settings settings(config::settings::mainnet);
+    const settings settings(chain::selection::mainnet);
     const chain::header instance(
         536870912u,
         hash_literal("abababababababababababababababababababababababababababababababab"),
@@ -438,7 +434,7 @@ BOOST_AUTO_TEST_CASE(header__is_valid_scrypt_proof_of_work__hash_greater_than_bi
 
 BOOST_AUTO_TEST_CASE(header__is_valid_scrypt_proof_of_work__hash_less_than_bits__returns_true)
 {
-    const settings settings(config::settings::mainnet);
+    const settings settings(chain::selection::mainnet);
     const chain::header instance(
         536870912u,
         hash_literal("313ced849aafeff324073bb2bd31ecdcc365ed215a34e827bb797ad33d158542"),
@@ -458,8 +454,7 @@ BOOST_AUTO_TEST_CASE(header__proof1__genesis_mainnet__expected)
 
 BOOST_AUTO_TEST_CASE(header__proof2__genesis_mainnet__expected)
 {
-    const chain::block block = settings(config::settings::mainnet)
-        .genesis_block;
+    const chain::block block = settings(chain::selection::mainnet).genesis_block;
     BOOST_REQUIRE_EQUAL(block.header().proof(), 0x0000000100010001);
 }
 

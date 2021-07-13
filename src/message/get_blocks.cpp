@@ -18,13 +18,10 @@
  */
 #include <bitcoin/system/message/get_blocks.hpp>
 
-#include <bitcoin/system/math/limits.hpp>
-#include <bitcoin/system/message/messages.hpp>
+#include <bitcoin/system/math/math.hpp>
+#include <bitcoin/system/message/message.hpp>
 #include <bitcoin/system/message/version.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -56,6 +53,39 @@ get_blocks get_blocks::factory(uint32_t version,
     get_blocks instance;
     instance.from_data(version, source);
     return instance;
+}
+
+// This predicts the size of locator_heights output.
+size_t get_blocks::locator_size(size_t top)
+{
+    size_t size = 0, step = 1;
+    for (auto height = top; height > 0; height = floored_subtract(height, step))
+        if (++size > 9u)
+            step <<= 1;
+
+    return ++size;
+}
+
+// This algorithm is a network best practice, not a consensus rule.
+get_blocks::indexes get_blocks::locator_heights(size_t top)
+{
+    size_t step = 1;
+    indexes heights;
+    heights.reserve(locator_size(top));
+
+    // Start at top block and collect block indexes in reverse.
+    for (auto height = top; height > 0; height = floored_subtract(height, step))
+    {
+        heights.push_back(height);
+
+        // Push top 10 indexes then back off exponentially.
+        if (heights.size() > 9u)
+            step <<= 1;
+    }
+
+    // Push the genesis block index.
+    heights.push_back(0);
+    return heights;
 }
 
 get_blocks::get_blocks()
@@ -97,13 +127,13 @@ void get_blocks::reset()
 
 bool get_blocks::from_data(uint32_t version, const data_chunk& data)
 {
-    data_source istream(data);
-    return from_data(version, istream);
+    stream::in::copy stream(data);
+    return from_data(version, stream);
 }
 
 bool get_blocks::from_data(uint32_t version, std::istream& stream)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(version, source);
 }
 
@@ -113,10 +143,10 @@ bool get_blocks::from_data(uint32_t, reader& source)
 
     // Discard protocol version because it is stupid.
     source.read_4_bytes_little_endian();
-    const auto count = source.read_size_little_endian();
+    const auto count = source.read_size();
 
     // Guard against potential for arbitrary memory allocation.
-    if (count > max_get_blocks)
+    if (count > chain::max_get_blocks)
         source.invalidate();
     else
         start_hashes_.reserve(count);
@@ -137,7 +167,7 @@ data_chunk get_blocks::to_data(uint32_t version) const
     data_chunk data;
     const auto size = serialized_size(version);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(version, ostream);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -146,24 +176,24 @@ data_chunk get_blocks::to_data(uint32_t version) const
 
 void get_blocks::to_data(uint32_t version, std::ostream& stream) const
 {
-    ostream_writer sink(stream);
-    to_data(version, sink);
+    write::bytes::ostream out(stream);
+    to_data(version, out);
 }
 
 void get_blocks::to_data(uint32_t version, writer& sink) const
 {
     sink.write_4_bytes_little_endian(version);
-    sink.write_variable_little_endian(start_hashes_.size());
+    sink.write_variable(start_hashes_.size());
 
     for (const auto& start_hash: start_hashes_)
-        sink.write_hash(start_hash);
+        sink.write_bytes(start_hash);
 
-    sink.write_hash(stop_hash_);
+    sink.write_bytes(stop_hash_);
 }
 
 size_t get_blocks::serialized_size(uint32_t) const
 {
-    return size_t(36) + variable_uint_size(start_hashes_.size()) +
+    return size_t(36) + variable_size(start_hashes_.size()) +
         hash_size * start_hashes_.size();
 }
 

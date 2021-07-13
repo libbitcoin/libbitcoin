@@ -25,7 +25,7 @@
 #include <iostream>
 #include <string>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/message/compact_filter.hpp>
+#include <bitcoin/system/message/message.hpp>
 
 namespace libbitcoin {
 namespace system {

@@ -16,23 +16,20 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-
+#include "../test.hpp"
 #include <cstdint>
 #include <iostream>
 #include <limits>
 #include <sstream>
 #include <string>
 #include <boost/format.hpp>
-#include <bitcoin/system.hpp>
 #include "number.hpp"
-#ifdef ENABLE_DATAGEN
-#include "big_number.hpp"
-#endif
+////#ifdef ENABLE_DATAGEN
+////#include "big_number.hpp"
+////#endif
 
 BOOST_AUTO_TEST_SUITE(number_tests)
 
-using namespace bc::system;
 using namespace bc::system::machine;
 
 // Helpers

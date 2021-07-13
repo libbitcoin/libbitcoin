@@ -19,13 +19,9 @@
 #include <bitcoin/system/message/compact_block.hpp>
 
 #include <initializer_list>
-#include <bitcoin/system/math/limits.hpp>
-#include <bitcoin/system/message/messages.hpp>
+#include <bitcoin/system/message/message.hpp>
 #include <bitcoin/system/message/version.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -109,13 +105,13 @@ void compact_block::reset()
 
 bool compact_block::from_data(uint32_t version, const data_chunk& data)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(version, istream);
 }
 
 bool compact_block::from_data(uint32_t version, std::istream& stream)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(version, source);
 }
 
@@ -127,10 +123,10 @@ bool compact_block::from_data(uint32_t version, reader& source)
         return false;
 
     nonce_ = source.read_8_bytes_little_endian();
-    auto count = source.read_size_little_endian();
+    auto count = source.read_size();
 
     // Guard against potential for arbitrary memory allocation.
-    if (count > max_block_size)
+    if (count > chain::max_block_size)
         source.invalidate();
     else
         short_ids_.reserve(count);
@@ -139,16 +135,16 @@ bool compact_block::from_data(uint32_t version, reader& source)
     for (size_t id = 0; id < count && source; ++id)
         short_ids_.push_back(source.read_mini_hash());
 
-    count = source.read_size_little_endian();
+    count = source.read_size();
 
     // Guard against potential for arbitrary memory allocation.
-    if (count > max_block_size)
+    if (count > chain::max_block_size)
         source.invalidate();
     else
         transactions_.resize(count);
 
     // Order is required.
-    for (auto& tx : transactions_)
+    for (auto& tx: transactions_)
         if (!tx.from_data(version, source))
             break;
 
@@ -166,7 +162,7 @@ data_chunk compact_block::to_data(uint32_t version) const
     data_chunk data;
     const auto size = serialized_size(version);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(version, ostream);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -175,20 +171,20 @@ data_chunk compact_block::to_data(uint32_t version) const
 
 void compact_block::to_data(uint32_t version, std::ostream& stream) const
 {
-    ostream_writer sink(stream);
-    to_data(version, sink);
+    write::bytes::ostream out(stream);
+    to_data(version, out);
 }
 
 void compact_block::to_data(uint32_t version, writer& sink) const
 {
     header_.to_data(sink);
     sink.write_8_bytes_little_endian(nonce_);
-    sink.write_variable_little_endian(short_ids_.size());
+    sink.write_variable(short_ids_.size());
 
     for (const auto& element: short_ids_)
-        sink.write_mini_hash(element);
+        sink.write_bytes(element);
 
-    sink.write_variable_little_endian(transactions_.size());
+    sink.write_variable(transactions_.size());
 
     for (const auto& element: transactions_)
         element.to_data(version, sink);
@@ -197,9 +193,9 @@ void compact_block::to_data(uint32_t version, writer& sink) const
 size_t compact_block::serialized_size(uint32_t version) const
 {
     auto size = chain::header::satoshi_fixed_size() +
-        variable_uint_size(short_ids_.size()) +
+        variable_size(short_ids_.size()) +
         (short_ids_.size() * 6u) +
-        variable_uint_size(transactions_.size()) + 8u;
+        variable_size(transactions_.size()) + 8u;
 
     for (const auto& tx: transactions_)
         size += tx.serialized_size(version);

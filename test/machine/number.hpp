@@ -57,10 +57,10 @@ const int64_t number_offsets[] =
     0x10000
 };
 
-BC_CONSTEXPR size_t number_values_count =
+constexpr size_t number_values_count =
 sizeof(number_values) / sizeof(number_values[0]);
 
-BC_CONSTEXPR size_t number_offsets_count =
+constexpr size_t number_offsets_count =
 sizeof(number_offsets) / sizeof(number_offsets[0]);
 
 struct number_buffer

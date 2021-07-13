@@ -19,21 +19,18 @@
 #include <bitcoin/system/chain/input.hpp>
 
 #include <algorithm>
+#include <bitcoin/system/chain/enums/magic_numbers.hpp>
 #include <bitcoin/system/chain/script.hpp>
 #include <bitcoin/system/chain/witness.hpp>
 #include <bitcoin/system/constants.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
-#include <bitcoin/system/wallet/payment_address.hpp>
+#include <bitcoin/system/stream/stream.hpp>
+
+// If required change to bc::checked.
+////#include <bitcoin/system/wallet/addresses/payment_address.hpp>
 
 namespace libbitcoin {
 namespace system {
 namespace chain {
-
-using namespace bc::system::wallet;
-using namespace bc::system::machine;
 
 // Constructors.
 //-----------------------------------------------------------------------------
@@ -46,7 +43,7 @@ input::input()
 }
 
 input::input(input&& other)
-  : addresses_(other.addresses_cache()),
+  : ////addresses_(other.addresses_cache()),
     previous_output_(std::move(other.previous_output_)),
     script_(std::move(other.script_)),
     witness_(std::move(other.witness_)),
@@ -55,7 +52,7 @@ input::input(input&& other)
 }
 
 input::input(const input& other)
-  : addresses_(other.addresses_cache()),
+  : ////addresses_(other.addresses_cache()),
     previous_output_(other.previous_output_),
     script_(std::move(other.script_)),
     witness_(other.witness_),
@@ -79,12 +76,12 @@ input::input(const output_point& previous_output, const chain::script& script,
 {
 }
 
-// Private cache access for copy/move construction.
-input::addresses_ptr input::addresses_cache() const
-{
-    shared_lock lock(mutex_);
-    return addresses_;
-}
+////// Private cache access for copy/move construction.
+////input::addresses_ptr input::addresses_cache() const
+////{
+////    shared_lock lock(mutex_);
+////    return addresses_;
+////}
 
 input::input(output_point&& previous_output, chain::script&& script,
     chain::witness&& witness, uint32_t sequence)
@@ -105,7 +102,7 @@ input::input(const output_point& previous_output, const chain::script& script,
 
 input& input::operator=(input&& other)
 {
-    addresses_ = other.addresses_cache();
+    ////addresses_ = other.addresses_cache();
     previous_output_ = std::move(other.previous_output_);
     script_ = std::move(other.script_);
     witness_ = std::move(other.witness_);
@@ -115,7 +112,7 @@ input& input::operator=(input&& other)
 
 input& input::operator=(const input& other)
 {
-    addresses_ = other.addresses_cache();
+    ////addresses_ = other.addresses_cache();
     previous_output_ = other.previous_output_;
     script_ = other.script_;
     witness_ = other.witness_;
@@ -162,14 +159,14 @@ input input::factory(reader& source, bool wire, bool witness)
 
 bool input::from_data(const data_chunk& data, bool wire, bool witness)
 {
-    data_source istream(data);
-    return from_data(istream, wire, witness);
+    read::bytes::copy reader(data);
+    return from_data(reader, wire, witness);
 }
 
 bool input::from_data(std::istream& stream, bool wire, bool witness)
 {
-    istream_reader source(stream);
-    return from_data(source, wire, witness);
+    read::bytes::istream reader(stream);
+    return from_data(reader, wire, witness);
 }
 
 bool input::from_data(reader& source, bool wire, bool witness)
@@ -219,7 +216,7 @@ data_chunk input::to_data(bool wire, bool witness) const
     data_chunk data;
     const auto size = serialized_size(wire, witness);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(ostream, wire, witness);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -228,8 +225,8 @@ data_chunk input::to_data(bool wire, bool witness) const
 
 void input::to_data(std::ostream& stream, bool wire, bool witness) const
 {
-    ostream_writer sink(stream);
-    to_data(sink, wire, witness);
+    write::bytes::ostream out(stream);
+    to_data(out, wire, witness);
 }
 
 void input::to_data(writer& sink, bool wire, bool witness) const
@@ -259,7 +256,7 @@ size_t input::serialized_size(bool wire, bool witness) const
     // Prefix is written for both wire and store/other contexts.
     return previous_output_.serialized_size(wire)
         + script_.serialized_size(true)
-        + (witness ? witness_.serialized_size(true) : 0)
+        + (witness ? witness_.serialized_size(true) : zero)
         + sizeof(sequence_);
 }
 
@@ -294,13 +291,13 @@ const chain::script& input::script() const
 void input::set_script(const chain::script& value)
 {
     script_ = value;
-    invalidate_cache();
+    ////invalidate_cache();
 }
 
 void input::set_script(chain::script&& value)
 {
     script_ = std::move(value);
-    invalidate_cache();
+    ////invalidate_cache();
 }
 
 const chain::witness& input::witness() const
@@ -311,13 +308,13 @@ const chain::witness& input::witness() const
 void input::set_witness(const chain::witness& value)
 {
     witness_ = value;
-    invalidate_cache();
+    ////invalidate_cache();
 }
 
 void input::set_witness(chain::witness&& value)
 {
     witness_ = std::move(value);
-    invalidate_cache();
+    ////invalidate_cache();
 }
 
 uint32_t input::sequence() const
@@ -330,56 +327,56 @@ void input::set_sequence(uint32_t value)
     sequence_ = value;
 }
 
-// protected
-void input::invalidate_cache() const
-{
-    ///////////////////////////////////////////////////////////////////////////
-    // Critical Section
-    mutex_.lock_upgrade();
+////// protected
+////void input::invalidate_cache() const
+////{
+////    ///////////////////////////////////////////////////////////////////////////
+////    // Critical Section
+////    mutex_.lock_upgrade();
+////
+////    if (addresses_)
+////    {
+////        mutex_.unlock_upgrade_and_lock();
+////        //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+////        addresses_.reset();
+////        //---------------------------------------------------------------------
+////        mutex_.unlock_and_lock_upgrade();
+////    }
+////
+////    mutex_.unlock_upgrade();
+////    ///////////////////////////////////////////////////////////////////////////
+////}
 
-    if (addresses_)
-    {
-        mutex_.unlock_upgrade_and_lock();
-        //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        addresses_.reset();
-        //---------------------------------------------------------------------
-        mutex_.unlock_and_lock_upgrade();
-    }
+////payment_address input::address() const
+////{
+////    const auto value = addresses();
+////    return value.empty() ? payment_address{} : value.front();
+////}
 
-    mutex_.unlock_upgrade();
-    ///////////////////////////////////////////////////////////////////////////
-}
-
-payment_address input::address() const
-{
-    const auto value = addresses();
-    return value.empty() ? payment_address{} : value.front();
-}
-
-payment_address::list input::addresses() const
-{
-    ///////////////////////////////////////////////////////////////////////////
-    // Critical Section
-    mutex_.lock_upgrade();
-
-    if (!addresses_)
-    {
-        //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        mutex_.unlock_upgrade_and_lock();
-
-        // TODO: expand to include segregated witness address extraction.
-        addresses_ = std::make_shared<payment_address::list>(
-            payment_address::extract_input(script_));
-        mutex_.unlock_and_lock_upgrade();
-        //---------------------------------------------------------------------
-    }
-
-    const auto addresses = *addresses_;
-    mutex_.unlock_upgrade();
-    ///////////////////////////////////////////////////////////////////////////
-
-    return addresses;
-}
+////payment_address::list input::addresses() const
+////{
+////    ///////////////////////////////////////////////////////////////////////////
+////    // Critical Section
+////    mutex_.lock_upgrade();
+////
+////    if (!addresses_)
+////    {
+////        //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+////        mutex_.unlock_upgrade_and_lock();
+////
+////        // TODO: expand to include segregated witness address extraction.
+////        addresses_ = std::make_shared<payment_address::list>(
+////            payment_address::extract_input(script_));
+////        mutex_.unlock_and_lock_upgrade();
+////        //---------------------------------------------------------------------
+////    }
+////
+////    const auto addresses = *addresses_;
+////    mutex_.unlock_upgrade();
+////    ///////////////////////////////////////////////////////////////////////////
+////
+////    return addresses;
+////}
 
 // Utilities.
 //-----------------------------------------------------------------------------
@@ -405,14 +402,14 @@ bool input::is_segregated() const
 
 bool input::is_locked(size_t block_height, uint32_t median_time_past) const
 {
-    if ((sequence_ & relative_locktime_disabled) != 0)
+    if (!is_zero(sequence_ & relative_locktime_disabled))
         return false;
 
     // bip68: a minimum block-height constraint over the input's age.
     const auto minimum = (sequence_ & relative_locktime_mask);
     const auto& prevout = previous_output_.metadata;
 
-    if ((sequence_ & relative_locktime_time_locked) != 0)
+    if (!is_zero(sequence_ & relative_locktime_time_locked))
     {
         // Median time past must be monotonically-increasing by block.
         BITCOIN_ASSERT(median_time_past >= prevout.median_time_past);
@@ -433,7 +430,7 @@ size_t input::signature_operations(bool bip16, bool bip141) const
     const auto& prevout = previous_output_.metadata.cache.script();
 
     // Penalize quadratic signature operations (bip141).
-    const auto sigops_factor = bip141 ? fast_sigops_factor : 1u;
+    const auto sigops_factor = bip141 ? fast_sigops_factor : one;
 
     // Count heavy sigops in the input script.
     auto sigops = script_.sigops(false) * sigops_factor;

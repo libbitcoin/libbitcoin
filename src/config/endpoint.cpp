@@ -20,18 +20,15 @@
 
 #include <cstdint>
 #include <string>
+#include <boost/asio.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/program_options.hpp>
 #include <boost/regex.hpp>
 #include <bitcoin/system/config/endpoint.hpp>
-#include <bitcoin/system/utility/asio.hpp>
+#include <bitcoin/system/exceptions.hpp>
 
 namespace libbitcoin {
 namespace system {
 namespace config {
-
-using namespace boost;
-using namespace boost::program_options;
 
 endpoint::endpoint()
   : endpoint("localhost")
@@ -64,12 +61,12 @@ endpoint::endpoint(const std::string& scheme, const std::string& host,
 {
 }
 
-endpoint::endpoint(const asio::endpoint& host)
+endpoint::endpoint(const boost::asio::ip::tcp::endpoint& host)
   : endpoint(host.address(), host.port())
 {
 }
 
-endpoint::endpoint(const asio::address& ip, uint16_t port)
+endpoint::endpoint(const boost::asio::ip::address& ip, uint16_t port)
   : host_(ip.to_string()), port_(port)
 {
 }
@@ -121,14 +118,12 @@ std::istream& operator>>(std::istream& input, endpoint& argument)
     input >> value;
 
     // std::regex requires gcc 4.9, so we are using boost::regex for now.
-    static const regex regular("^((tcp|udp|http|https|inproc):\\/\\/)?"
+    static const boost::regex regular("^((tcp|udp|http|https|inproc):\\/\\/)?"
         "(\\[([0-9a-f:\\.]+)]|([^:]+))(:([0-9]{1,5}))?$");
 
-    sregex_iterator it(value.begin(), value.end(), regular), end;
+    boost::sregex_iterator it(value.begin(), value.end(), regular), end;
     if (it == end)
-    {
-        BOOST_THROW_EXCEPTION(invalid_option_value(value));
-    }
+        throw istream_exception(value);
 
     const auto& match = *it;
     argument.scheme_ = match[2];
@@ -137,11 +132,11 @@ std::istream& operator>>(std::istream& input, endpoint& argument)
 
     try
     {
-        argument.port_ = port.empty() ? 0 : lexical_cast<uint16_t>(port);
+        argument.port_ = port.empty() ? 0u : boost::lexical_cast<uint16_t>(port);
     }
     catch (const boost::exception&)
     {
-        BOOST_THROW_EXCEPTION(invalid_option_value(value));
+        throw istream_exception(value);
     }
 
     return input;
@@ -154,7 +149,7 @@ std::ostream& operator<<(std::ostream& output, const endpoint& argument)
 
     output << argument.host();
 
-    if (argument.port() != 0)
+    if (argument.port() != 0u)
         output << ":" << argument.port();
 
     return output;

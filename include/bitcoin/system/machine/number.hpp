@@ -20,8 +20,8 @@
 #define LIBBITCOIN_SYSTEM_MACHINE_NUMBER_HPP
 
 #include <cstddef>
+#include <bitcoin/system/data/data.hpp>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/utility/data.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -41,26 +41,6 @@ namespace machine {
 class BC_API number
 {
 public:
-    static const uint8_t negative_1;
-    static const uint8_t positive_0;
-    static const uint8_t positive_1;
-    static const uint8_t positive_2;
-    static const uint8_t positive_3;
-    static const uint8_t positive_4;
-    static const uint8_t positive_5;
-    static const uint8_t positive_6;
-    static const uint8_t positive_7;
-    static const uint8_t positive_8;
-    static const uint8_t positive_9;
-    static const uint8_t positive_10;
-    static const uint8_t positive_11;
-    static const uint8_t positive_12;
-    static const uint8_t positive_13;
-    static const uint8_t positive_14;
-    static const uint8_t positive_15;
-    static const uint8_t positive_16;
-    static const uint8_t negative_sign;
-
     /// Construct with zero value.
     number();
 
@@ -95,8 +75,8 @@ public:
     //-------------------------------------------------------------------------
 
     //*************************************************************************
-    // CONSENSUS: script::number implements consensus critical overflow
-    // behavior for all operators, specifically [-, +, +=, -=].
+    // CONSENSUS: number implements consensus critical overflow behavior for
+    // all operators, specifically [-, +, +=, -=].
     //*************************************************************************
 
     bool operator>(int64_t value) const;
@@ -132,8 +112,5 @@ private:
 } // namespace machine
 } // namespace system
 } // namespace libbitcoin
-
-
-#include <bitcoin/system/impl/machine/number.ipp>
 
 #endif

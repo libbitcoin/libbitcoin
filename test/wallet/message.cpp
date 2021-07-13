@@ -16,11 +16,10 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
+#include "../test.hpp"
 
-using namespace bc;
-using namespace bc::system;
+BOOST_AUTO_TEST_SUITE(message_tests)
+
 using namespace bc::system::wallet;
 
 // $ bx base16-encode "Satoshi" | bx sha256
@@ -36,8 +35,6 @@ using namespace bc::system::wallet;
 
 // Generated using Electrum and above SECRET (compressed):
 #define ELECTRUM_SIGNATURE "1f1429ddc5e03888411065e4b36eec7de4901d580d51e6209798b9c06fdd39461a4884679f35d1e8d7321fe01f3401ed916732383f6b5f8a688ea9ae4321fbf4ae"
-
-BOOST_AUTO_TEST_SUITE(message_tests)
 
 BOOST_AUTO_TEST_SUITE(message__recovery_magic)
 

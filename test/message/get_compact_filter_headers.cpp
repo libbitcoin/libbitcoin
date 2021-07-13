@@ -19,10 +19,7 @@
 
 // Sponsored in part by Digital Contract Design, LLC
 
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(get_compact_filter_headers_tests)
 
@@ -152,7 +149,7 @@ BOOST_AUTO_TEST_CASE(get_compact_filter_headers__factory_2__valid_input__success
     const auto data = expected.to_data(message::get_compact_filter_headers::version_minimum);
     BOOST_REQUIRE(raw == data);
 
-    data_source istream(data);
+    stream::in::copy istream(data);
     const auto result = message::get_compact_filter_headers::factory(message::get_compact_filter_headers::version_minimum, istream);
 
     BOOST_REQUIRE(result.is_valid());
@@ -173,8 +170,7 @@ BOOST_AUTO_TEST_CASE(get_compact_filter_headers__factory_3__valid_input__success
     const auto data = expected.to_data(message::get_compact_filter_headers::version_minimum);
     BOOST_REQUIRE(raw == data);
 
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = message::get_compact_filter_headers::factory(message::get_compact_filter_headers::version_minimum, source);
 
     BOOST_REQUIRE(result.is_valid());

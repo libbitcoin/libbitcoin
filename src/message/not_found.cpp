@@ -19,7 +19,7 @@
 #include <bitcoin/system/message/not_found.hpp>
 
 #include <initializer_list>
-#include <bitcoin/system/math/hash.hpp>
+#include <bitcoin/system/crypto/crypto.hpp>
 #include <bitcoin/system/message/inventory.hpp>
 #include <bitcoin/system/message/version.hpp>
 

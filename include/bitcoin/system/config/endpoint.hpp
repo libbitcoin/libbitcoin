@@ -26,7 +26,7 @@
 #include <boost/asio.hpp>
 #include <bitcoin/system/config/authority.hpp>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/formats/base_16.hpp>
+#include <bitcoin/system/radix/radix.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -84,20 +84,21 @@ public:
      * @param[in]  host    The host name or ip address to initialize with.
      * @param[in]  port    The port to initialize with.
      */
-    endpoint(const std::string& scheme, const std::string& host, uint16_t port);
+    endpoint(const std::string& scheme, const std::string& host,
+        uint16_t port);
 
     /**
      * Initialization constructor.
      * @param[in]  endpoint  The endpoint addresss to initialize with.
      */
-    endpoint(const asio::endpoint& host);
+    endpoint(const boost::asio::ip::tcp::endpoint& host);
 
     /**
      * Initialization constructor.
      * @param[in]  ip    The boost ip addresss to initialize with.
      * @param[in]  port  The port to initialize with.
      */
-    endpoint(const asio::address& ip, uint16_t port);
+    endpoint(const boost::asio::ip::address& ip, uint16_t port);
 
     /**
      * Getter.

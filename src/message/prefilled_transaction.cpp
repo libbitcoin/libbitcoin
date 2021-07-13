@@ -18,13 +18,9 @@
  */
 #include <bitcoin/system/message/prefilled_transaction.hpp>
 
-#include <bitcoin/system/chain/transaction.hpp>
-#include <bitcoin/system/message/messages.hpp>
+#include <bitcoin/system/message/message.hpp>
 #include <bitcoin/system/message/version.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -96,23 +92,22 @@ void prefilled_transaction::reset()
 bool prefilled_transaction::from_data(uint32_t version,
     const data_chunk& data)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(version, istream);
 }
 
 bool prefilled_transaction::from_data(uint32_t version,
     std::istream& stream)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(version, source);
 }
 
-bool prefilled_transaction::from_data(uint32_t ,
-    reader& source)
+bool prefilled_transaction::from_data(uint32_t, reader& source)
 {
     reset();
 
-    index_ = source.read_variable_little_endian();
+    index_ = source.read_variable();
     transaction_.from_data(source, true);
 
     if (!source)
@@ -126,7 +121,7 @@ data_chunk prefilled_transaction::to_data(uint32_t version) const
     data_chunk data;
     const auto size = serialized_size(version);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(version, ostream);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -136,20 +131,20 @@ data_chunk prefilled_transaction::to_data(uint32_t version) const
 void prefilled_transaction::to_data(uint32_t version,
     std::ostream& stream) const
 {
-    ostream_writer sink(stream);
-    to_data(version, sink);
+    write::bytes::ostream out(stream);
+    to_data(version, out);
 }
 
 void prefilled_transaction::to_data(uint32_t ,
     writer& sink) const
 {
-    sink.write_variable_little_endian(index_);
+    sink.write_variable(index_);
     transaction_.to_data(sink);
 }
 
 size_t prefilled_transaction::serialized_size(uint32_t) const
 {
-    return variable_uint_size(index_) + transaction_.serialized_size(true);
+    return variable_size(index_) + transaction_.serialized_size(true);
 }
 
 uint64_t prefilled_transaction::index() const

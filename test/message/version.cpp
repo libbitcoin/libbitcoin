@@ -16,10 +16,9 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
+#include "../test.hpp"
 
-using namespace bc::system;
+BOOST_AUTO_TEST_SUITE(version_tests)
 
 static const auto version_maximum = message::version::level::maximum;
 
@@ -38,8 +37,6 @@ static const auto version_maximum = message::version::level::maximum;
 
 // "/therealbitcoin.org:0.9.99.99/" (99999) no relay
 #define NO_RELAY_THEREALBITCOIN_1 "9f86010001000000000000002336a15800000000010000000000000000000000000000000000ffff1813e52ebb81010000000000000000000000000000000000ffff6f6f6f6f208db1f33b262e6acb331e2f7468657265616c626974636f696e2e6f72673a302e392e39392e39392fb9e80600"
-
-BOOST_AUTO_TEST_SUITE(version_tests)
 
 BOOST_AUTO_TEST_CASE(version__factory__therealbitcoin_dot_org__valid)
 {
@@ -471,7 +468,7 @@ BOOST_AUTO_TEST_CASE(version__factory_2__valid_input__success)
     );
 
     const auto data = expected.to_data(version_maximum);
-    data_source istream(data);
+    stream::in::copy istream(data);
     const auto result = message::version::factory(version_maximum, istream);
     BOOST_REQUIRE(result.is_valid());
     BOOST_REQUIRE_EQUAL(data.size(), result.serialized_size(version_maximum));
@@ -515,10 +512,8 @@ BOOST_AUTO_TEST_CASE(version__factory_3__valid_input__success)
         true
     );
 
-
     const auto data = expected.to_data(version_maximum);
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = message::version::factory(version_maximum, source);
 
     BOOST_REQUIRE(result.is_valid());

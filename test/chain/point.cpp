@@ -16,14 +16,11 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
-
-const auto valid_raw_point = to_chunk(base16_literal("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f00000015"));
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(point_tests)
+
+const auto valid_raw_point = base16_chunk("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f00000015");
 
 BOOST_AUTO_TEST_CASE(point__constructor_1__always__returns_default_initialized)
 {
@@ -120,7 +117,7 @@ BOOST_AUTO_TEST_CASE(point__from_data__roundtrip__success)
 
 BOOST_AUTO_TEST_CASE(point__factory_1__roundtrip__success)
 {
-    const auto raw = to_chunk(base16_literal("46682488f0a721124a3905a1bb72445bf13493e2cd46c5c0c8db1c15afa0d58e00000000"));
+    const auto raw = base16_chunk("46682488f0a721124a3905a1bb72445bf13493e2cd46c5c0c8db1c15afa0d58e00000000");
     const auto data = data_chunk
     {
         0x46, 0x68, 0x24, 0x88, 0xf0, 0xa7, 0x21, 0x12, 0x4a, 0x39, 0x05, 0xa1,
@@ -142,7 +139,7 @@ BOOST_AUTO_TEST_CASE(point__factory_1__roundtrip__success)
 
 BOOST_AUTO_TEST_CASE(point__factory_2__roundtrip__success)
 {
-    const auto raw = to_chunk(base16_literal("46682488f0a721124a3905a1bb72445bf13493e2cd46c5c0c8db1c15afa0d58e00000000"));
+    const auto raw = base16_chunk("46682488f0a721124a3905a1bb72445bf13493e2cd46c5c0c8db1c15afa0d58e00000000");
     const data_chunk data
     {
         0x46, 0x68, 0x24, 0x88, 0xf0, 0xa7, 0x21, 0x12, 0x4a, 0x39, 0x05, 0xa1,
@@ -152,7 +149,7 @@ BOOST_AUTO_TEST_CASE(point__factory_2__roundtrip__success)
 
     BOOST_REQUIRE(raw == data);
 
-    data_source istream(raw);
+    stream::in::copy istream(raw);
     auto point = chain::point::factory(istream);
 
     BOOST_REQUIRE(point.is_valid());
@@ -165,7 +162,7 @@ BOOST_AUTO_TEST_CASE(point__factory_2__roundtrip__success)
 
 BOOST_AUTO_TEST_CASE(point__factory_3__roundtrip__success)
 {
-    const auto raw = to_chunk(base16_literal("46682488f0a721124a3905a1bb72445bf13493e2cd46c5c0c8db1c15afa0d58e00000000"));
+    const auto raw = base16_chunk("46682488f0a721124a3905a1bb72445bf13493e2cd46c5c0c8db1c15afa0d58e00000000");
     const data_chunk data
     {
         0x46, 0x68, 0x24, 0x88, 0xf0, 0xa7, 0x21, 0x12, 0x4a, 0x39, 0x05, 0xa1,
@@ -175,8 +172,7 @@ BOOST_AUTO_TEST_CASE(point__factory_3__roundtrip__success)
 
     BOOST_REQUIRE(raw == data);
 
-    data_source istream(raw);
-    istream_reader source(istream);
+    read::bytes::copy source(raw);
     auto point = chain::point::factory(source);
 
     BOOST_REQUIRE(point.is_valid());
@@ -283,7 +279,7 @@ BOOST_AUTO_TEST_CASE(point__checksum__all_ones__returns_all_ones)
     BOOST_REQUIRE_EQUAL(instance.checksum(), 0xffffffffffffffff);
 }
 
-BOOST_AUTO_TEST_CASE(point__checksum__all_zeroes__returns_all_zeroes)
+BOOST_AUTO_TEST_CASE(point__checksum__all_zeroes__returns_all_zeros)
 {
     static const auto tx_hash = hash_literal("0000000000000000000000000000000000000000000000000000000000000000");
     chain::point instance(tx_hash, 0x00000000);

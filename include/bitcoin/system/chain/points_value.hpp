@@ -23,7 +23,6 @@
 #include <cstdint>
 #include <bitcoin/system/chain/point_value.hpp>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/math/limits.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -32,11 +31,35 @@ namespace chain {
 class BC_API points_value
 {
 public:
-    /// A set of valued points.
-    point_value::list points;
+    enum class selection
+    {
+        /// The smallest single sufficient unspent output, if one exists, or a
+        /// sufficient set of unspent outputs, if such a set exists. The set is
+        /// minimal by number of outputs but not necessarily by total value.
+        greedy,
+
+        /// A set of individually sufficient unspent outputs. Each individual
+        /// member of the set is sufficient. Return ascending order by value.
+        individual
+    };
+
+    /// Select outpoints for a spend from a list of unspent outputs.
+    static void select(chain::points_value& out,
+        const chain::points_value& unspent, uint64_t minimum_value,
+        selection option=selection::greedy);
 
     /// Total value of the current set of points.
     uint64_t value() const;
+
+    /// A set of valued points.
+    point_value::list points;
+
+private:
+    static void greedy(chain::points_value& out,
+        const chain::points_value& unspent, uint64_t minimum_value);
+
+    static void individual(chain::points_value& out,
+        const chain::points_value& unspent, uint64_t minimum_value);
 };
 
 } // namespace chain

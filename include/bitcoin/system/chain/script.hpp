@@ -24,34 +24,31 @@
 #include <istream>
 #include <memory>
 #include <string>
+#include <bitcoin/system/chain/enums/rule_fork.hpp>
+#include <bitcoin/system/chain/enums/script_pattern.hpp>
+#include <bitcoin/system/chain/enums/script_version.hpp>
+#include <bitcoin/system/chain/operation.hpp>
 #include <bitcoin/system/constants.hpp>
+#include <bitcoin/system/crypto/crypto.hpp>
+#include <bitcoin/system/data/data.hpp>
 #include <bitcoin/system/define.hpp>
 #include <bitcoin/system/error.hpp>
-#include <bitcoin/system/math/elliptic_curve.hpp>
-#include <bitcoin/system/machine/operation.hpp>
-#include <bitcoin/system/machine/rule_fork.hpp>
-#include <bitcoin/system/machine/script_pattern.hpp>
-#include <bitcoin/system/machine/script_version.hpp>
-#include <bitcoin/system/utility/data.hpp>
-#include <bitcoin/system/utility/reader.hpp>
-#include <bitcoin/system/utility/thread.hpp>
-#include <bitcoin/system/utility/writer.hpp>
+#include <bitcoin/system/mutex.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
 namespace chain {
 
 class transaction;
-class witness;
 
 class BC_API script
 {
 public:
-    typedef machine::operation operation;
-    typedef machine::rule_fork rule_fork;
-    typedef machine::script_pattern script_pattern;
-    typedef machine::script_version script_version;
     typedef std::vector<script> list;
+
+    /// Consensus sentinel.
+    static const hash_digest one;
 
     // Constructors.
     //-------------------------------------------------------------------------
@@ -157,9 +154,9 @@ public:
     static data_chunk to_sequences(const transaction& tx);
 
     /// Determine if the fork is enabled in the active forks set.
-    static bool is_enabled(uint32_t active_forks, rule_fork fork)
+    static inline bool is_enabled(uint32_t active_forks, rule_fork fork)
     {
-        return (fork & active_forks) != 0;
+        return !is_zero(fork & active_forks);
     }
 
     /// Consensus patterns.
@@ -169,13 +166,14 @@ public:
     static bool is_commitment_pattern(const operation::list& ops);
     static bool is_witness_program_pattern(const operation::list& ops);
 
-
     /// Common output patterns (psh and pwsh are also consensus).
     static bool is_pay_null_data_pattern(const operation::list& ops);
     static bool is_pay_multisig_pattern(const operation::list& ops);
     static bool is_pay_public_key_pattern(const operation::list& ops);
     static bool is_pay_key_hash_pattern(const operation::list& ops);
     static bool is_pay_script_hash_pattern(const operation::list& ops);
+    static bool is_pay_witness_pattern(const operation::list& ops);
+    static bool is_pay_witness_key_hash_pattern(const operation::list& ops);
     static bool is_pay_witness_script_hash_pattern(const operation::list& ops);
 
     /// Common input patterns (skh is also consensus).
@@ -190,9 +188,11 @@ public:
     static operation::list to_pay_key_hash_pattern(const short_hash& hash);
     static operation::list to_pay_script_hash_pattern(const short_hash& hash);
     static operation::list to_pay_multisig_pattern(uint8_t signatures,
-        const point_list& points);
+        const compressed_list& points);
     static operation::list to_pay_multisig_pattern(uint8_t signatures,
         const data_stack& points);
+    static  operation::list to_pay_witness_pattern(uint8_t version,
+        const data_slice& data);
     static operation::list to_pay_witness_key_hash_pattern(
         const short_hash& hash);
     static operation::list to_pay_witness_script_hash_pattern(

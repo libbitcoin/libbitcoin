@@ -22,22 +22,21 @@
 #include <cstddef>
 #include <istream>
 #include <string>
+#include <bitcoin/system/chain/operation.hpp>
 #include <bitcoin/system/chain/script.hpp>
+#include <bitcoin/system/data/data.hpp>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/machine/operation.hpp>
-#include <bitcoin/system/utility/data.hpp>
-#include <bitcoin/system/utility/reader.hpp>
-#include <bitcoin/system/utility/thread.hpp>
-#include <bitcoin/system/utility/writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
 namespace chain {
+    
+class transaction;
 
 class BC_API witness
 {
 public:
-    typedef machine::operation operation;
     typedef data_stack::const_iterator iterator;
 
     // Constructors.
@@ -132,7 +131,6 @@ protected:
 
 private:
     static size_t serialized_size(const data_stack& stack);
-    static operation::list to_pay_key_hash(data_chunk&& program);
 
     bool valid_;
     data_stack stack_;

@@ -23,9 +23,9 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <boost/asio.hpp>
 #include <bitcoin/system/define.hpp>
 #include <bitcoin/system/message/network_address.hpp>
-#include <bitcoin/system/utility/asio.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -91,13 +91,13 @@ public:
      * @param[in]  ip    The boost ip addresss to initialize with.
      * @param[in]  port  The port to initialize with.
      */
-    authority(const asio::address& ip, uint16_t port);
+    authority(const boost::asio::ip::address& ip, uint16_t port);
 
     /**
      * Initialization constructor.
      * @param[in]  endpoint  The boost endpoint address to initialize with.
      */
-    authority(const asio::endpoint& endpoint);
+    authority(const boost::asio::ip::tcp::endpoint& endpoint);
 
     /**
      * Getter.
@@ -109,7 +109,7 @@ public:
      * Getter.
      * @return The ip address of the authority.
      */
-    asio::ipv6 asio_ip() const;
+    boost::asio::ip::address_v6 asio_ip() const;
 
     /**
      * Getter.
@@ -176,7 +176,7 @@ public:
         const authority& argument);
 
 private:
-    asio::ipv6 ip_;
+    boost::asio::ip::address_v6 ip_;
     uint16_t port_;
 };
 

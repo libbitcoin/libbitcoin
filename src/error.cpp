@@ -20,7 +20,6 @@
 
 #include <boost/asio.hpp>
 #include <boost/system/error_code.hpp>
-#include <bitcoin/system/compat.hpp>
 
 using namespace bc::system;
 
@@ -28,10 +27,10 @@ class error_category_impl
   : public std::error_category
 {
 public:
-    virtual const char* name() const BC_NOEXCEPT;
-    virtual std::string message(int ev) const BC_NOEXCEPT;
+    virtual const char* name() const noexcept;
+    virtual std::string message(int ev) const noexcept;
     virtual std::error_condition default_error_condition(int ev)
-        const BC_NOEXCEPT;
+        const noexcept;
 };
 
 static const error_category_impl& get_error_category_instance()
@@ -40,12 +39,12 @@ static const error_category_impl& get_error_category_instance()
     return instance;
 }
 
-const char* error_category_impl::name() const BC_NOEXCEPT
+const char* error_category_impl::name() const noexcept
 {
     return "bitcoin";
 }
 
-std::string error_category_impl::message(int ev) const BC_NOEXCEPT
+std::string error_category_impl::message(int ev) const noexcept
 {
     static const std::unordered_map<int, std::string> messages =
     {
@@ -264,7 +263,7 @@ std::string error_category_impl::message(int ev) const BC_NOEXCEPT
 
 // We are not currently using this.
 std::error_condition error_category_impl::default_error_condition(int ev)
-    const BC_NOEXCEPT
+    const noexcept
 {
     return std::error_condition(ev, *this);
 }

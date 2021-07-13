@@ -16,10 +16,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(send_compact_tests)
 
@@ -77,7 +74,7 @@ BOOST_AUTO_TEST_CASE(send_compact__factory_2__valid_input__success)
 {
     const message::send_compact expected{ false, 5 };
     const auto data = expected.to_data(message::send_compact::version_minimum);
-    data_source istream(data);
+    stream::in::copy istream(data);
     const auto result = message::send_compact::factory(
         message::send_compact::version_minimum, istream);
 
@@ -93,8 +90,7 @@ BOOST_AUTO_TEST_CASE(send_compact__factory_3__valid_input__success)
 {
     const message::send_compact expected{ true, 257 };
     const auto data = expected.to_data(message::send_compact::version_minimum);
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = message::send_compact::factory(
         message::send_compact::version_minimum, source);
 

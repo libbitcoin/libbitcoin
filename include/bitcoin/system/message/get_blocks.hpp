@@ -19,15 +19,15 @@
 #ifndef LIBBITCOIN_SYSTEM_MESSAGE_GET_BLOCKS_HPP
 #define LIBBITCOIN_SYSTEM_MESSAGE_GET_BLOCKS_HPP
 
+#include <cstddef>
 #include <istream>
 #include <memory>
 #include <string>
 #include <vector>
+#include <bitcoin/system/crypto/crypto.hpp>
+#include <bitcoin/system/data/data.hpp>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/math/hash.hpp>
-#include <bitcoin/system/utility/data.hpp>
-#include <bitcoin/system/utility/reader.hpp>
-#include <bitcoin/system/utility/writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -36,12 +36,16 @@ namespace message {
 class BC_API get_blocks
 {
 public:
+    typedef std::vector<size_t> indexes;
     typedef std::shared_ptr<get_blocks> ptr;
     typedef std::shared_ptr<const get_blocks> const_ptr;
 
     static get_blocks factory(uint32_t version, const data_chunk& data);
     static get_blocks factory(uint32_t version, std::istream& stream);
     static get_blocks factory(uint32_t version, reader& source);
+
+    static size_t locator_size(size_t top);
+    static indexes locator_heights(size_t top);
 
     get_blocks();
     get_blocks(const hash_list& start, const hash_digest& stop);

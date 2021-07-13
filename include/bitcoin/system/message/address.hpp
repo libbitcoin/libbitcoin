@@ -24,8 +24,7 @@
 #include <string>
 #include <bitcoin/system/define.hpp>
 #include <bitcoin/system/message/network_address.hpp>
-#include <bitcoin/system/utility/reader.hpp>
-#include <bitcoin/system/utility/writer.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {

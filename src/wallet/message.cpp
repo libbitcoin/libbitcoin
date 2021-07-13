@@ -20,10 +20,8 @@
 
 #include <bitcoin/system/constants.hpp>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/math/limits.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
-#include <bitcoin/system/wallet/ec_private.hpp>
+#include <bitcoin/system/stream/stream.hpp>
+#include <bitcoin/system/wallet/keys/ec_private.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -42,12 +40,11 @@ hash_digest hash_message(const data_slice& message)
     static const std::string prefix("Bitcoin Signed Message:\n");
 
     data_chunk data;
-    data_sink ostream(data);
-    ostream_writer sink(ostream);
-    sink.write_string(prefix);
-    sink.write_variable_little_endian(message.size());
-    sink.write_bytes(message.begin(), message.size());
-    ostream.flush();
+    write::bytes::data out(data);
+    out.write_string(prefix);
+    out.write_variable(message.size());
+    out.write_bytes(message);
+    out.flush();
     return bitcoin_hash(data);
 }
 
@@ -100,16 +97,15 @@ bool magic_to_recovery_id(uint8_t& out_recovery_id, bool& out_compressed,
         return false;
 
     // Subtract smaller sentinel (guarded above).
-    auto recovery_id = magic - magic_uncompressed;
+    out_recovery_id = magic - magic_uncompressed;
 
     // Obtain compression state (differential exceeds the recovery id range).
-    out_compressed = recovery_id >= magic_differential;
+    out_compressed = out_recovery_id >= magic_differential;
 
     // If compression is indicated subtract differential (guarded above).
     if (out_compressed)
-        recovery_id -= magic_differential;
+        out_recovery_id -= magic_differential;
 
-    out_recovery_id = safe_to_unsigned<uint8_t>(recovery_id);
     return true;
 }
 
@@ -146,7 +142,7 @@ bool verify_message(const data_slice& message, const payment_address& address,
     const message_signature& signature)
 {
     const auto magic = signature.front();
-    const auto compact = slice<1, message_signature_size>(signature);
+    const auto compact = slice<one, message_signature_size>(signature);
 
     bool compressed;
     uint8_t recovery_id;

@@ -22,9 +22,9 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <bitcoin/system/chain/script.hpp>
+#include <bitcoin/system/chain/chain.hpp>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/utility/data.hpp>
+#include <bitcoin/system/data/data.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -83,7 +83,7 @@ public:
      * @param[in]  flags  The rule fork flags to use.
      * @return            A mnemonic-printed copy of the internal script.
      */
-    std::string to_string(uint32_t flags=machine::rule_fork::all_rules) const;
+    std::string to_string(uint32_t flags=chain::rule_fork::all_rules) const;
 
     /**
      * Overload cast to internal type.

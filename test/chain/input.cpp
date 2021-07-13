@@ -16,21 +16,18 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
+#include "../test.hpp"
 
-using namespace bc;
-using namespace bc::system;
+BOOST_AUTO_TEST_SUITE(input_tests)
+
 using namespace bc::system::chain;
 
-data_chunk valid_raw_input = to_chunk(base16_literal(
+const auto valid_raw_input = to_chunk(base16_literal(
     "54b755c39207d443fd96a8d12c94446a1c6f66e39c95e894c23418d7501f681b01000"
     "0006b48304502203267910f55f2297360198fff57a3631be850965344370f732950b4"
     "7795737875022100f7da90b82d24e6e957264b17d3e5042bab8946ee5fc676d15d915"
     "da450151d36012103893d5a06201d5cf61400e96fa4a7514fc12ab45166ace618d68b"
     "8066c9c585f9ffffffff"));
-
-BOOST_AUTO_TEST_SUITE(input_tests)
 
 BOOST_AUTO_TEST_CASE(input__constructor_1__always__returns_default_initialized)
 {
@@ -42,7 +39,7 @@ BOOST_AUTO_TEST_CASE(input__constructor_2__valid_input__returns_input_initialize
 {
     const output_point previous_output{ null_hash, 5434u };
     script script;
-    BOOST_REQUIRE(script.from_data(to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1")), false));
+    BOOST_REQUIRE(script.from_data(base16_chunk("ece424a6bb6ddf4db592c0faed60685047a361b1"), false));
 
     uint32_t sequence = 4568656u;
 
@@ -57,7 +54,7 @@ BOOST_AUTO_TEST_CASE(input__constructor_3__valid_input__returns_input_initialize
 {
     const output_point previous_output{ null_hash, 5434u };
     script script;
-    BOOST_REQUIRE(script.from_data(to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1")), false));
+    BOOST_REQUIRE(script.from_data(base16_chunk("ece424a6bb6ddf4db592c0faed60685047a361b1"), false));
 
     uint32_t sequence = 4568656u;
 
@@ -93,9 +90,7 @@ BOOST_AUTO_TEST_CASE(input__constructor_5__valid_input__returns_input_initialize
 BOOST_AUTO_TEST_CASE(input__from_data__insufficient_data__failure)
 {
     data_chunk data(2);
-
     input instance;
-
     BOOST_REQUIRE(!instance.from_data(data));
     BOOST_REQUIRE(!instance.is_valid());
 }
@@ -103,13 +98,9 @@ BOOST_AUTO_TEST_CASE(input__from_data__insufficient_data__failure)
 BOOST_AUTO_TEST_CASE(input__from_data__valid_data__success)
 {
     const auto junk = base16_literal("000000000000005739943a9c29a1955dfae2b3f37de547005bfb9535192e5fb0000000000000005739943a9c29a1955dfae2b3f37de547005bfb9535192e5fb0");
-
-    // data_chunk_stream_host host(junk);
-    byte_source<std::array<uint8_t, 64>> source(junk);
-    boost::iostreams::stream<byte_source<std::array<uint8_t, 64>>> stream(source);
-
     input instance;
-    BOOST_REQUIRE(instance.from_data(stream));
+    read::bytes::copy reader(junk);
+    BOOST_REQUIRE(instance.from_data(reader));
 }
 
 BOOST_AUTO_TEST_CASE(input__factory_1__valid_input__success)
@@ -126,7 +117,7 @@ BOOST_AUTO_TEST_CASE(input__factory_1__valid_input__success)
 
 BOOST_AUTO_TEST_CASE(input__factory_2__valid_input__success)
 {
-    data_source stream(valid_raw_input);
+    stream::in::copy stream(valid_raw_input);
     auto instance = input::factory(stream);
     BOOST_REQUIRE(instance.is_valid());
     BOOST_REQUIRE_EQUAL(instance.serialized_size(), valid_raw_input.size());
@@ -139,8 +130,7 @@ BOOST_AUTO_TEST_CASE(input__factory_2__valid_input__success)
 
 BOOST_AUTO_TEST_CASE(input__factory_3__valid_input__success)
 {
-    data_source stream(valid_raw_input);
-    istream_reader source(stream);
+    read::bytes::copy source(valid_raw_input);
     auto instance = input::factory(source);
     BOOST_REQUIRE(instance.is_valid());
     BOOST_REQUIRE_EQUAL(instance.serialized_size(), valid_raw_input.size());
@@ -249,7 +239,7 @@ BOOST_AUTO_TEST_CASE(input__is_locked__disabled_time_type_sequence_age_below_min
 
 BOOST_AUTO_TEST_CASE(input__signature_operations__bip16_inactive__returns_script_sigops)
 {
-    const auto raw_script = to_chunk(base16_literal("02acad"));
+    const auto raw_script = base16_chunk("02acad");
     script script;
     BOOST_REQUIRE(script.from_data(raw_script, true));
     input instance;
@@ -259,7 +249,7 @@ BOOST_AUTO_TEST_CASE(input__signature_operations__bip16_inactive__returns_script
 
 BOOST_AUTO_TEST_CASE(input__signature_operations__bip16_active_cache_empty__returns_script_sigops)
 {
-    const auto raw_script = to_chunk(base16_literal("02acad"));
+    const auto raw_script = base16_chunk("02acad");
     script script;
     BOOST_REQUIRE(script.from_data(raw_script, true));
     input instance;
@@ -304,7 +294,7 @@ BOOST_AUTO_TEST_CASE(input__previous_output_setter_2__roundtrip__success)
 BOOST_AUTO_TEST_CASE(input__script_setter_1__roundtrip__success)
 {
     script value;
-    const auto data = to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1"));
+    const auto data = base16_chunk("ece424a6bb6ddf4db592c0faed60685047a361b1");
     BOOST_REQUIRE(value.from_data(data, false));
 
     input instance;
@@ -318,7 +308,7 @@ BOOST_AUTO_TEST_CASE(input__script_setter_1__roundtrip__success)
 BOOST_AUTO_TEST_CASE(input__script_setter_2__roundtrip__success)
 {
     script value;
-    const auto data = to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1"));
+    const auto data = base16_chunk("ece424a6bb6ddf4db592c0faed60685047a361b1");
     BOOST_REQUIRE(value.from_data(data, false));
 
     auto dup_value = value;

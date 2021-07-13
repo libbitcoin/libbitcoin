@@ -19,8 +19,9 @@
 #include <bitcoin/system/chain/compact.hpp>
 
 #include <cstdint>
-#include <bitcoin/system/math/hash.hpp>
-#include <bitcoin/system/utility/assert.hpp>
+#include <bitcoin/system/assert.hpp>
+#include <bitcoin/system/constants.hpp>
+#include <bitcoin/system/data/uintx.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -33,7 +34,7 @@ namespace chain {
 static constexpr uint32_t exp_byte = 0xff000000;
 static constexpr uint32_t sign_bit = 0x00800000;
 static constexpr uint32_t mantissa_max = ~(exp_byte | sign_bit);
-static constexpr uint32_t mantissa_bits = (sizeof(uint32_t) - 1) * 8;
+static constexpr size_t mantissa_bits = to_bits(sub1(sizeof(uint32_t)));
 
 // assertions
 DEBUG_ONLY(static constexpr uint32_t mantissa_mask = ~mantissa_max;)
@@ -44,12 +45,12 @@ DEBUG_ONLY(static constexpr uint32_t first_byte_mask = 0xffffff00;)
 
 inline bool is_negated(uint32_t compact)
 {
-    return (compact & sign_bit) != 0;
+    return !is_zero(compact & sign_bit);
 }
 
 inline bool is_nonzero(uint32_t compact)
 {
-    return (compact & mantissa_max) != 0;
+    return !is_zero(compact & mantissa_max);
 }
 
 inline uint8_t log_256(uint32_t mantissa)
@@ -65,27 +66,27 @@ inline uint8_t log_256(uint32_t mantissa)
 inline bool is_overflow(uint8_t exponent, uint32_t mantissa)
 {
     // Overflow if exponent would shift the mantissa more than 32 bytes.
-    return (mantissa > 0) && (exponent > 32 + 3 - log_256(mantissa));
+    return !is_zero(mantissa) && (exponent > (32 + 3 - log_256(mantissa)));
 }
 
 inline uint32_t shift_low(uint8_t exponent)
 {
     BITCOIN_ASSERT(exponent <= 3);
-    return  8 * (3 - exponent);
+    return to_bits(3 - exponent);
 }
 
 inline uint32_t shift_high(uint8_t exponent)
 {
     BITCOIN_ASSERT(exponent > 3);
-    return  8 * (exponent - 3);
+    return to_bits(exponent - 3);
 }
 
 inline size_t logical_size(uint256_t value)
 {
-    auto byte = 0;
+    auto byte = zero;
 
-    for (; value != 0; ++byte)
-        value >>= 8;
+    for (; !is_zero(value); ++byte)
+        value >>= byte_bits;
 
     return byte;
 }
@@ -177,11 +178,11 @@ uint32_t compact::from_big(const uint256_t& big)
     if (is_negated(mantissa))
     {
         exponent++;
-        mantissa >>= 8;
+        mantissa >>= byte_bits;
     }
 
-    BITCOIN_ASSERT_MSG((exponent & first_byte_mask) == 0, "size excess");
-    BITCOIN_ASSERT_MSG((mantissa & mantissa_mask) == 0, "value excess");
+    BITCOIN_ASSERT_MSG(is_zero(exponent & first_byte_mask), "size excess");
+    BITCOIN_ASSERT_MSG(is_zero(mantissa & mantissa_mask), "value excess");
 
     // Assemble the compact notation.
     return (exponent << mantissa_bits) | mantissa;

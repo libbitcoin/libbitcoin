@@ -16,29 +16,26 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
+#include "../test.hpp"
 
-using namespace bc::system;
+BOOST_AUTO_TEST_SUITE(address_tests)
+
 using namespace bc::system::message;
 
 bool equal(const address& left, const address& right)
 {
     const auto left_addresses = left.addresses();
     const auto right_addresses = right.addresses();
-
-    bool same = (left_addresses.size() == right_addresses.size());
+    auto same = (left_addresses.size() == right_addresses.size());
 
     for (size_t i = 0; (i < left_addresses.size()) && same; i++)
     {
-        same = (left_addresses[i] == right_addresses[i])
-            && (left_addresses[i].timestamp() == right_addresses[i].timestamp());
+        same = (left_addresses[i] == right_addresses[i]) && 
+            (left_addresses[i].timestamp() == right_addresses[i].timestamp());
     }
 
     return same;
 }
-
-BOOST_AUTO_TEST_SUITE(address_tests)
 
 BOOST_AUTO_TEST_CASE(address__constructor_1__always__invalid)
 {
@@ -202,7 +199,7 @@ BOOST_AUTO_TEST_CASE(address__factory_2__roundtrip__success)
     });
 
     const auto data = expected.to_data(version::level::minimum);
-    data_source istream(data);
+    stream::in::copy istream(data);
     const auto result = address::factory(version::level::minimum, istream);
 
     BOOST_REQUIRE(result.is_valid());
@@ -225,8 +222,7 @@ BOOST_AUTO_TEST_CASE(address__factory_3__roundtrip__success)
     });
 
     const data_chunk data = expected.to_data(version::level::minimum);
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = address::factory(version::level::minimum, source);
 
     BOOST_REQUIRE(result.is_valid());

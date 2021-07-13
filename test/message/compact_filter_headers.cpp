@@ -19,10 +19,7 @@
 
 // Sponsored in part by Digital Contract Design, LLC
 
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(compact_filter_headers_tests)
 
@@ -145,7 +142,7 @@ BOOST_AUTO_TEST_CASE(compact_filter_headers__from_data__insufficient_bytes__fail
     const auto raw = to_chunk(base16_literal(
         "0b"
         "bb5b26270e07d26283238bcbefb622682a43e9c5bb51a8276b3309f7553d4040"
-        "01cf1a02915dc0137cae81ea04161dbebc0d7ec44"));
+        "01cf1a02915dc0137cae81ea04161dbebc0d7ec4"));
 
     message::compact_filter_headers instance;
     BOOST_REQUIRE_EQUAL(false, instance.from_data(
@@ -249,7 +246,7 @@ BOOST_AUTO_TEST_CASE(compact_filter_headers__factory_2__valid_input__success)
         message::compact_filter_headers::version_minimum);
     BOOST_REQUIRE(raw == data);
 
-    data_source istream(data);
+    stream::in::copy istream(data);
     auto result = message::compact_filter_headers::factory(
         message::compact_filter_headers::version_minimum, istream);
 
@@ -284,8 +281,7 @@ BOOST_AUTO_TEST_CASE(compact_filter_headers__factory_3__valid_input__success)
         message::compact_filter_headers::version_minimum);
     BOOST_REQUIRE(raw == data);
 
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = message::compact_filter_headers::factory(
         message::compact_filter_headers::version_minimum, source);
 

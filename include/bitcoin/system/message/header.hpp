@@ -16,18 +16,17 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef LIBBITCOIN_SYSTEM_MESSAGE_HEADER_MESSAGE_HPP
-#define LIBBITCOIN_SYSTEM_MESSAGE_HEADER_MESSAGE_HPP
+#ifndef LIBBITCOIN_SYSTEM_MESSAGE_HEADER_HPP
+#define LIBBITCOIN_SYSTEM_MESSAGE_HEADER_HPP
 
 #include <cstdint>
 #include <cstddef>
 #include <istream>
 #include <memory>
-#include <bitcoin/system/chain/header.hpp>
+#include <bitcoin/system/chain/chain.hpp>
+#include <bitcoin/system/data/data.hpp>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/message/version.hpp>
-#include <bitcoin/system/utility/data.hpp>
-#include <bitcoin/system/utility/reader.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {

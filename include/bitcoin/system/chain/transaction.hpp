@@ -25,20 +25,16 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <boost/optional.hpp>
 #include <bitcoin/system/chain/chain_state.hpp>
 #include <bitcoin/system/chain/input.hpp>
 #include <bitcoin/system/chain/output.hpp>
 #include <bitcoin/system/chain/point.hpp>
+#include <bitcoin/system/crypto/crypto.hpp>
 #include <bitcoin/system/define.hpp>
 #include <bitcoin/system/error.hpp>
-#include <bitcoin/system/math/elliptic_curve.hpp>
-#include <bitcoin/system/math/hash.hpp>
-#include <bitcoin/system/machine/opcode.hpp>
-#include <bitcoin/system/machine/rule_fork.hpp>
-#include <bitcoin/system/utility/reader.hpp>
-#include <bitcoin/system/utility/thread.hpp>
-#include <bitcoin/system/utility/writer.hpp>
+#include <bitcoin/system/mutex.hpp>
+#include <bitcoin/system/optional.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -223,16 +219,19 @@ protected:
 
 private:
     typedef std::shared_ptr<hash_digest> hash_ptr;
-    typedef boost::optional<uint64_t> optional_value;
 
     hash_ptr hash_cache() const;
-    optional_value total_input_value_cache() const;
-    optional_value total_output_value_cache() const;
+    optional64 total_input_value_cache() const;
+    optional64 total_output_value_cache() const;
 
     uint32_t version_;
     uint32_t locktime_;
     input::list inputs_;
     output::list outputs_;
+
+    // Hashing invokes to_data() which invokes is_segregated(), which is
+    // guarded by value_mutex_, so hash and value must have distinct mutexes.
+    // Hashing does not invoke hashing, and values do not invoke 
 
     // These share a mutex as they are not expected to contend.
     mutable hash_ptr hash_;
@@ -243,10 +242,10 @@ private:
     mutable upgrade_mutex hash_mutex_;
 
     // These share a mutex as they are not expected to contend.
-    mutable optional_value total_input_value_;
-    mutable optional_value total_output_value_;
-    mutable boost::optional<bool> segregated_;
-    mutable upgrade_mutex mutex_;
+    mutable optional64 total_input_value_;
+    mutable optional64 total_output_value_;
+    mutable optional_flag segregated_;
+    mutable upgrade_mutex value_mutex_;
 };
 
 } // namespace chain

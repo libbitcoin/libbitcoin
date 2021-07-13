@@ -16,10 +16,8 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
+#include "../test.hpp"
 
-using namespace bc::system;
 using namespace bc::system::message;
 
 BOOST_AUTO_TEST_SUITE(message_block_tests)
@@ -173,7 +171,7 @@ BOOST_AUTO_TEST_CASE(block__constructor_7__always__equals_params)
 
 BOOST_AUTO_TEST_CASE(block__factory_data_1__genesis_mainnet__success)
 {
-    const chain::block genesis = settings(config::settings::mainnet).genesis_block;
+    const chain::block genesis = settings(chain::selection::mainnet).genesis_block;
     BOOST_REQUIRE_EQUAL(genesis.serialized_size(), 285u);
     BOOST_REQUIRE_EQUAL(genesis.header().serialized_size(), 80u);
 
@@ -197,7 +195,7 @@ BOOST_AUTO_TEST_CASE(block__factory_data_1__genesis_mainnet__success)
 
 BOOST_AUTO_TEST_CASE(block__factory_data_2__genesis_mainnet__success)
 {
-    const chain::block genesis = settings(config::settings::mainnet).genesis_block;
+    const chain::block genesis = settings(chain::selection::mainnet).genesis_block;
     BOOST_REQUIRE_EQUAL(genesis.serialized_size(), 285u);
     BOOST_REQUIRE_EQUAL(genesis.header().serialized_size(), 80u);
 
@@ -206,7 +204,7 @@ BOOST_AUTO_TEST_CASE(block__factory_data_2__genesis_mainnet__success)
     BOOST_REQUIRE_EQUAL(raw_block.size(), 285u);
 
     // Reload genesis block.
-    data_source stream(raw_block);
+    stream::in::copy stream(raw_block);
     const auto block = block::factory(version::level::minimum, stream);
 
     BOOST_REQUIRE(block.is_valid());
@@ -216,7 +214,7 @@ BOOST_AUTO_TEST_CASE(block__factory_data_2__genesis_mainnet__success)
     BOOST_REQUIRE(block.generate_merkle_root() == genesis.header().merkle_root());
 
     data_chunk raw_reserialization;
-    data_sink sink(raw_reserialization);
+    stream::out::data sink(raw_reserialization);
     block.to_data(version::level::minimum, sink);
     sink.flush();
     BOOST_REQUIRE(raw_reserialization == raw_block);
@@ -225,7 +223,7 @@ BOOST_AUTO_TEST_CASE(block__factory_data_2__genesis_mainnet__success)
 
 BOOST_AUTO_TEST_CASE(block__factory_data_3__genesis_mainnet__success)
 {
-    const chain::block genesis = settings(config::settings::mainnet).genesis_block;
+    const chain::block genesis = settings(chain::selection::mainnet).genesis_block;
     BOOST_REQUIRE_EQUAL(genesis.serialized_size(), 285u);
     BOOST_REQUIRE_EQUAL(genesis.header().serialized_size(), 80u);
 
@@ -234,8 +232,8 @@ BOOST_AUTO_TEST_CASE(block__factory_data_3__genesis_mainnet__success)
     BOOST_REQUIRE_EQUAL(raw_block.size(), 285u);
 
     // Reload genesis block.
-    data_source stream(raw_block);
-    istream_reader reader(stream);
+    stream::in::copy stream(raw_block);
+    read::bytes::istream reader(stream);
     const auto block = block::factory(version::level::minimum + 1, reader);
 
     BOOST_REQUIRE(block.is_valid());
@@ -245,10 +243,9 @@ BOOST_AUTO_TEST_CASE(block__factory_data_3__genesis_mainnet__success)
     BOOST_REQUIRE(block.generate_merkle_root() == genesis.header().merkle_root());
 
     data_chunk raw_reserialization;
-    data_sink sink(raw_reserialization);
-    ostream_writer writer(sink);
-    block.to_data(version::level::minimum, writer);
-    sink.flush();
+    write::bytes::data out(raw_reserialization);
+    block.to_data(version::level::minimum, out);
+    out.flush();
     BOOST_REQUIRE(raw_reserialization == raw_block);
     BOOST_REQUIRE_EQUAL(raw_reserialization.size(), block.serialized_size(version::level::minimum));
 }

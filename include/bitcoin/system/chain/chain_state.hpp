@@ -23,12 +23,11 @@
 #include <cstdint>
 #include <memory>
 #include <deque>
-#include <bitcoin/system/config/checkpoint.hpp>
+#include <bitcoin/system/chain/check_point.hpp>
+#include <bitcoin/system/chain/enums/rule_fork.hpp>
 #include <bitcoin/system/constants.hpp>
 #include <bitcoin/system/define.hpp>
-#include <bitcoin/system/math/hash.hpp>
-#include <bitcoin/system/machine/opcode.hpp>
-#include <bitcoin/system/machine/rule_fork.hpp>
+#include <bitcoin/system/math/math.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -36,7 +35,7 @@ namespace system {
 class settings;
 
 namespace chain {
-
+    
 class block;
 class header;
 
@@ -49,7 +48,7 @@ public:
     typedef struct { size_t count; size_t high; } range;
 
     typedef std::shared_ptr<chain_state> ptr;
-    typedef config::checkpoint::list checkpoints;
+    typedef check_point::list check_points;
 
     /// Heights used to identify construction requirements.
     /// All values are lower-bounded by the genesis block height.
@@ -128,10 +127,10 @@ public:
     };
 
     /// Checkpoints must be ordered by height with greatest at back.
-    static map get_map(size_t height, const checkpoints& checkpoints,
+    static map get_map(size_t height, const check_points& checkpoints,
         uint32_t forks, size_t retargeting_interval, size_t activation_sample,
-        const config::checkpoint& bip9_bit0_active_checkpoint,
-        const config::checkpoint& bip9_bit1_active_checkpoint);
+        const check_point& bip9_bit0_active_checkpoint,
+        const check_point& bip9_bit1_active_checkpoint);
 
     static uint32_t signal_version(uint32_t forks,
         const system::settings& settings);
@@ -156,7 +155,7 @@ public:
 
     /// Checkpoints must be ordered by height with greatest at back.
     /// Forks and checkpoints must match those provided for map creation.
-    chain_state(data&& values, const checkpoints& checkpoints, uint32_t forks,
+    chain_state(data&& values, const check_points& checkpoints, uint32_t forks,
         uint32_t stale_seconds, const system::settings& settings);
 
     /// Properties.
@@ -175,7 +174,7 @@ public:
     bool is_stale() const;
 
     /// Determine if the fork is set for this block.
-    bool is_enabled(machine::rule_fork fork) const;
+    bool is_enabled(chain::rule_fork fork) const;
 
     /// Determine if this block hash fails a checkpoint at this height.
     bool is_checkpoint_conflict(const hash_digest& hash) const;
@@ -211,21 +210,22 @@ private:
     static size_t retarget_height(size_t height, uint32_t forks,
         size_t retargeting_interval);
     static size_t bip9_bit0_height(size_t height,
-        const config::checkpoint& bip9_bit0_active_checkpoint);
+        const check_point& bip9_bit0_active_checkpoint);
     static size_t bip9_bit1_height(size_t height,
-        const config::checkpoint& bip9_bit1_active_checkpoint);
+        const check_point& bip9_bit1_active_checkpoint);
 
     static data to_pool(const chain_state& top,
         const system::settings& settings);
     static data to_block(const chain_state& pool, const block& block,
-        const config::checkpoint& bip9_bit0_active_checkpoint,
-        const config::checkpoint& bip9_bit1_active_checkpoint);
+        const check_point& bip9_bit0_active_checkpoint,
+        const check_point& bip9_bit1_active_checkpoint);
     data to_header(const chain_state& parent, const header& header,
         const system::settings& settings);
 
     static uint32_t work_required_retarget(const data& values, uint32_t forks,
-        uint32_t proof_of_work_limit, uint32_t minimum_timespan,
-        uint32_t maximum_timespan, uint32_t retargeting_interval_seconds);
+        uint256_t work_limit, uint32_t proof_of_work_limit,
+        uint32_t minimum_timespan, uint32_t maximum_timespan,
+        uint32_t retargeting_interval_seconds);
     static uint32_t retarget_timespan(const chain_state::data& values,
         uint32_t minimum_timespan, uint32_t maximum_timespan);
 
@@ -251,7 +251,7 @@ private:
     const uint32_t stale_seconds_;
 
     // Checkpoints do not affect the data that is collected or promoted.
-    const config::checkpoint::list& checkpoints_;
+    const check_points& checkpoints_;
 
     // These are computed on construct from sample and checkpoints.
     const activations active_;

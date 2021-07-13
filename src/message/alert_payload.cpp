@@ -19,11 +19,8 @@
 #include <bitcoin/system/message/alert_payload.hpp>
 
 #include <bitcoin/system/constants.hpp>
-#include <bitcoin/system/message/messages.hpp>
-#include <bitcoin/system/utility/container_sink.hpp>
-#include <bitcoin/system/utility/container_source.hpp>
-#include <bitcoin/system/utility/istream_reader.hpp>
-#include <bitcoin/system/utility/ostream_writer.hpp>
+#include <bitcoin/system/message/message.hpp>
+#include <bitcoin/system/stream/stream.hpp>
 
 namespace libbitcoin {
 namespace system {
@@ -215,13 +212,13 @@ void alert_payload::reset()
 
 bool alert_payload::from_data(uint32_t version, const data_chunk& data)
 {
-    data_source istream(data);
+    stream::in::copy istream(data);
     return from_data(version, istream);
 }
 
 bool alert_payload::from_data(uint32_t version, std::istream& stream)
 {
-    istream_reader source(stream);
+    read::bytes::istream source(stream);
     return from_data(version, source);
 }
 
@@ -234,14 +231,14 @@ bool alert_payload::from_data(uint32_t, reader& source)
     expiration_ = source.read_8_bytes_little_endian();
     id_ = source.read_4_bytes_little_endian();
     cancel_ = source.read_4_bytes_little_endian();
-    set_cancel_.reserve(source.read_size_little_endian());
+    set_cancel_.reserve(source.read_size());
 
     for (size_t i = 0; i < set_cancel_.capacity() && source; i++)
         set_cancel_.push_back(source.read_4_bytes_little_endian());
 
     min_version_ = source.read_4_bytes_little_endian();
     max_version_ = source.read_4_bytes_little_endian();
-    set_sub_version_.reserve(source.read_size_little_endian());
+    set_sub_version_.reserve(source.read_size());
 
     for (size_t i = 0; i < set_sub_version_.capacity() && source; i++)
         set_sub_version_.push_back(source.read_string());
@@ -262,7 +259,7 @@ data_chunk alert_payload::to_data(uint32_t version) const
     data_chunk data;
     const auto size = serialized_size(version);
     data.reserve(size);
-    data_sink ostream(data);
+    stream::out::data ostream(data);
     to_data(version, ostream);
     ostream.flush();
     BITCOIN_ASSERT(data.size() == size);
@@ -271,8 +268,8 @@ data_chunk alert_payload::to_data(uint32_t version) const
 
 void alert_payload::to_data(uint32_t version, std::ostream& stream) const
 {
-    ostream_writer sink(stream);
-    to_data(version, sink);
+    write::bytes::ostream out(stream);
+    to_data(version, out);
 }
 
 void alert_payload::to_data(uint32_t, writer& sink) const
@@ -282,14 +279,14 @@ void alert_payload::to_data(uint32_t, writer& sink) const
     sink.write_8_bytes_little_endian(expiration_);
     sink.write_4_bytes_little_endian(id_);
     sink.write_4_bytes_little_endian(cancel_);
-    sink.write_variable_little_endian(set_cancel_.size());
+    sink.write_variable(set_cancel_.size());
 
     for (const auto& entry: set_cancel_)
         sink.write_4_bytes_little_endian(entry);
 
     sink.write_4_bytes_little_endian(min_version_);
     sink.write_4_bytes_little_endian(max_version_);
-    sink.write_variable_little_endian(set_sub_version_.size());
+    sink.write_variable(set_sub_version_.size());
 
     for (const auto& entry: set_sub_version_)
         sink.write_string(entry);
@@ -303,14 +300,14 @@ void alert_payload::to_data(uint32_t, writer& sink) const
 size_t alert_payload::serialized_size(uint32_t) const
 {
     size_t size = 40u +
-        variable_uint_size(comment_.size()) + comment_.size() +
-        variable_uint_size(status_bar_.size()) + status_bar_.size() +
-        variable_uint_size(reserved_.size()) + reserved_.size() +
-        variable_uint_size(set_cancel_.size()) + (4 * set_cancel_.size()) +
-        variable_uint_size(set_sub_version_.size());
+        variable_size(comment_.size()) + comment_.size() +
+        variable_size(status_bar_.size()) + status_bar_.size() +
+        variable_size(reserved_.size()) + reserved_.size() +
+        variable_size(set_cancel_.size()) + (4 * set_cancel_.size()) +
+        variable_size(set_sub_version_.size());
 
     for (const auto& sub_version : set_sub_version_)
-        size += variable_uint_size(sub_version.size()) + sub_version.size();
+        size += variable_size(sub_version.size()) + sub_version.size();
 
     return size;
 }

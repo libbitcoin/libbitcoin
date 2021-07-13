@@ -16,11 +16,9 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
+#include "../test.hpp"
 
-using namespace bc;
-using namespace bc::system;
+BOOST_AUTO_TEST_SUITE(chain_block_tests)
 
 // Test helper.
 static bool all_valid(const chain::transaction::list& transactions)
@@ -47,48 +45,7 @@ static bool all_valid(const chain::transaction::list& transactions)
     return valid;
 }
 
-BOOST_AUTO_TEST_SUITE(chain_block_tests)
-
-BOOST_AUTO_TEST_CASE(block__locator_size__zero_backoff__returns_top_plus_one)
-{
-    const auto top = 7u;
-    BOOST_REQUIRE_EQUAL(chain::block::locator_size(top), top + 1);
-}
-
-BOOST_AUTO_TEST_CASE(block__locator_size__zero_backoff__returns_top_plus_one_regression_check)
-{
-    const auto top = 11u;
-    BOOST_REQUIRE_EQUAL(chain::block::locator_size(top), top + 1);
-}
-
-BOOST_AUTO_TEST_CASE(block__locator_size__positive_backoff__returns_log_plus_eleven)
-{
-    const auto top = 138u;
-    BOOST_REQUIRE_EQUAL(chain::block::locator_size(top), 18u);
-}
-
-BOOST_AUTO_TEST_CASE(block__locator_heights__zero_backoff__returns_top_to_zero)
-{
-    const chain::block::indexes expected{ 7u, 6u, 5u, 4u, 3u, 2u, 1u, 0u };
-    const auto top = 7u;
-    auto result = chain::block::locator_heights(top);
-    BOOST_REQUIRE_EQUAL(expected.size(), result.size());
-    BOOST_REQUIRE(expected == result);
-}
-
-BOOST_AUTO_TEST_CASE(block__locator_heights__positive_backoff__returns_top_plus_log_offset_to_zero)
-{
-    const chain::block::indexes expected
-    {
-        138u, 137u, 136u, 135u, 134u, 133u, 132u, 131u, 130u,
-        129u, 128u, 126u, 122u, 114u,  98u,  66u,   2u,   0u
-    };
-
-    const auto top = 138u;
-    auto result = chain::block::locator_heights(top);
-    BOOST_REQUIRE_EQUAL(expected.size(), result.size());
-    BOOST_REQUIRE(expected == result);
-}
+BOOST_AUTO_TEST_SUITE(chain_block_construct_tests)
 
 BOOST_AUTO_TEST_CASE(block__constructor_1__always__invalid)
 {
@@ -244,6 +201,8 @@ BOOST_AUTO_TEST_CASE(block__is_valid_merkle_root__valid__returns_true)
     BOOST_REQUIRE(instance.is_valid_merkle_root());
 }
 
+BOOST_AUTO_TEST_SUITE_END()
+
 BOOST_AUTO_TEST_SUITE(block_serialization_tests)
 
 BOOST_AUTO_TEST_CASE(block__from_data__insufficient_bytes__failure)
@@ -256,7 +215,7 @@ BOOST_AUTO_TEST_CASE(block__from_data__insufficient_bytes__failure)
 
 BOOST_AUTO_TEST_CASE(block__from_data__insufficient_transaction_bytes__failure)
 {
-    const data_chunk data = to_chunk(base16_literal(
+    const auto data = to_chunk(base16_literal(
         "010000007f110631052deeee06f0754a3629ad7663e56359fd5f3aa7b3e30a00"
         "000000005f55996827d9712147a8eb6d7bae44175fe0bcfa967e424a25bfe9f4"
         "dc118244d67fb74c9d8e2f1bea5ee82a03010000000100000000000000000000"
@@ -270,7 +229,7 @@ BOOST_AUTO_TEST_CASE(block__from_data__insufficient_transaction_bytes__failure)
 
 BOOST_AUTO_TEST_CASE(block__genesis__mainnet__valid_structure)
 {
-    const chain::block genesis = settings(config::settings::mainnet).genesis_block;
+    const chain::block genesis = settings(chain::selection::mainnet).genesis_block;
     BOOST_REQUIRE(genesis.is_valid());
     BOOST_REQUIRE_EQUAL(genesis.transactions().size(), 1u);
     BOOST_REQUIRE(genesis.header().merkle_root() == genesis.generate_merkle_root());
@@ -278,7 +237,7 @@ BOOST_AUTO_TEST_CASE(block__genesis__mainnet__valid_structure)
 
 BOOST_AUTO_TEST_CASE(block__genesis__testnet__valid_structure)
 {
-    const chain::block genesis = settings(config::settings::testnet).genesis_block;
+    const chain::block genesis = settings(chain::selection::testnet).genesis_block;
     BOOST_REQUIRE(genesis.is_valid());
     BOOST_REQUIRE_EQUAL(genesis.transactions().size(), 1u);
     BOOST_REQUIRE(genesis.header().merkle_root() == genesis.generate_merkle_root());
@@ -286,7 +245,7 @@ BOOST_AUTO_TEST_CASE(block__genesis__testnet__valid_structure)
 
 BOOST_AUTO_TEST_CASE(block__genesis__regtest__valid_structure)
 {
-    const chain::block genesis = settings(config::settings::regtest).genesis_block;
+    const chain::block genesis = settings(chain::selection::regtest).genesis_block;
     BOOST_REQUIRE(genesis.is_valid());
     BOOST_REQUIRE_EQUAL(genesis.transactions().size(), 1u);
     BOOST_REQUIRE(genesis.header().merkle_root() == genesis.generate_merkle_root());
@@ -295,7 +254,7 @@ BOOST_AUTO_TEST_CASE(block__genesis__regtest__valid_structure)
 
 BOOST_AUTO_TEST_CASE(block__factory_1__genesis_mainnet__success)
 {
-    const chain::block genesis = settings(config::settings::mainnet).genesis_block;
+    const chain::block genesis = settings(chain::selection::mainnet).genesis_block;
     BOOST_REQUIRE_EQUAL(genesis.serialized_size(), 285u);
     BOOST_REQUIRE_EQUAL(genesis.header().serialized_size(), 80u);
 
@@ -315,7 +274,7 @@ BOOST_AUTO_TEST_CASE(block__factory_1__genesis_mainnet__success)
 
 BOOST_AUTO_TEST_CASE(block__factory_2__genesis_mainnet__success)
 {
-    const chain::block genesis = settings(config::settings::mainnet).genesis_block;
+    const chain::block genesis = settings(chain::selection::mainnet).genesis_block;
     BOOST_REQUIRE_EQUAL(genesis.serialized_size(), 285u);
     BOOST_REQUIRE_EQUAL(genesis.header().serialized_size(), 80u);
 
@@ -324,7 +283,7 @@ BOOST_AUTO_TEST_CASE(block__factory_2__genesis_mainnet__success)
     BOOST_REQUIRE_EQUAL(raw_block.size(), 285u);
 
     // Reload genesis block.
-    data_source stream(raw_block);
+    stream::in::copy stream(raw_block);
     const auto block = chain::block::factory(stream);
 
     BOOST_REQUIRE(block.is_valid());
@@ -336,7 +295,7 @@ BOOST_AUTO_TEST_CASE(block__factory_2__genesis_mainnet__success)
 
 BOOST_AUTO_TEST_CASE(block__factory_3__genesis_mainnet__success)
 {
-    const chain::block genesis = settings(config::settings::mainnet).genesis_block;
+    const chain::block genesis = settings(chain::selection::mainnet).genesis_block;
     BOOST_REQUIRE_EQUAL(genesis.serialized_size(), 285u);
     BOOST_REQUIRE_EQUAL(genesis.header().serialized_size(), 80u);
 
@@ -345,9 +304,8 @@ BOOST_AUTO_TEST_CASE(block__factory_3__genesis_mainnet__success)
     BOOST_REQUIRE_EQUAL(raw_block.size(), 285u);
 
     // Reload genesis block.
-    data_source stream(raw_block);
-    istream_reader reader(stream);
-    const auto block = chain::block::factory(reader);
+    read::bytes::copy source(raw_block);
+    const auto block = chain::block::factory(source);
 
     BOOST_REQUIRE(block.is_valid());
     BOOST_REQUIRE(genesis.header() == block.header());
@@ -369,7 +327,7 @@ BOOST_AUTO_TEST_CASE(block__generate_merkle_root__block_with_zero_transactions__
 BOOST_AUTO_TEST_CASE(block__generate_merkle_root__block_with_multiple_transactions__matches_historic_data)
 {
     // encodes the 100,000 block data.
-    const data_chunk raw = to_chunk(base16_literal(
+    const auto raw = to_chunk(base16_literal(
         "010000007f110631052deeee06f0754a3629ad7663e56359fd5f3aa7b3e30a00"
         "000000005f55996827d9712147a8eb6d7bae44175fe0bcfa967e424a25bfe9f4"
         "dc118244d67fb74c9d8e2f1bea5ee82a03010000000100000000000000000000"

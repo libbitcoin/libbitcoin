@@ -16,13 +16,11 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
-#include <bitcoin/system.hpp>
-
-using namespace bc::system;
-using namespace bc::system::message;
+#include "../test.hpp"
 
 BOOST_AUTO_TEST_SUITE(fee_filter_tests)
+
+using namespace bc::system::message;
 
 BOOST_AUTO_TEST_CASE(fee_filter__constructor_1__always__invalid)
 {
@@ -89,7 +87,7 @@ BOOST_AUTO_TEST_CASE(fee_filter__factory_2__roundtrip__success)
 {
     const fee_filter expected{ 325 };
     const auto data = expected.to_data(fee_filter::version_maximum);
-    data_source istream(data);
+    stream::in::copy istream(data);
     const auto result = fee_filter::factory(fee_filter::version_maximum, istream);
     BOOST_REQUIRE(result.is_valid());
     BOOST_REQUIRE(expected == result);
@@ -103,8 +101,7 @@ BOOST_AUTO_TEST_CASE(fee_filter__factory_3__roundtrip__success)
 {
     const fee_filter expected{ 58246 };
     const auto data = expected.to_data(fee_filter::version_maximum);
-    data_source istream(data);
-    istream_reader source(istream);
+    read::bytes::copy source(data);
     const auto result = fee_filter::factory(fee_filter::version_maximum, source);
     BOOST_REQUIRE(result.is_valid());
     BOOST_REQUIRE(expected == result);
